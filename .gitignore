@@ -1,0 +1,46 @@
+# Archivos de credenciales - NUNCA subir a repositorios
+.env
+*.env
+*.json
+tesis-*.json
+
+# Ambiente virtual
+venv/
+env/
+
+# Carpetas personales - NO subir
+pruebas_unitarias/
+pruebas_generales/
+docs/
+
+# Archivos de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Logs
+logs/
+*.log
+
+# Datos descargados
+descargas/
+*.tif
+*.tiff
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,27 @@
+INFORME ESTADÍSTICO: NDVI
+============================================================
+
+Fecha de generación: 24/11/2025 12:11:51
+Archivo fuente: descargas\NDVI\UPIITA_contours_27Oct2025_20251029_125600\valores_pixeles\indices_20250929_a_20251029_pixeles_validos.shp
+
+Distribución por clases:
+------------------------------------------------------------
+0.0-0.1         |    77 píxeles (  7.0%)
+0.1-0.2         |   131 píxeles ( 11.9%)
+0.2-0.3         |   158 píxeles ( 14.3%)
+0.3-0.4         |   170 píxeles ( 15.4%)
+0.4-0.5         |   196 píxeles ( 17.8%)
+0.5-0.6         |   236 píxeles ( 21.4%)
+0.6-0.7         |   114 píxeles ( 10.3%)
+0.7-0.8         |    17 píxeles (  1.5%)
+0.8-1.0         |     0 píxeles (  0.0%)
+
+============================================================
+Estadísticas Generales:
+------------------------------------------------------------
+Total píxeles válidos:  1103
+Mínimo:                 -0.0279
+Máximo:                 0.7626
+Media:                  0.3888
+Mediana:                0.4060
+Desviación estándar:    0.1808
