@@ -187,9 +187,10 @@ class GEEDownloader:
         Returns:
             Diccionario con información de la descarga
         """
-        # Crear carpeta de salida
+        # Crear carpeta de salida con nueva estructura: descargas/area/indice/
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        carpeta_indice = self.output_dir / indice
+        carpeta_area = self.output_dir / nombre_area
+        carpeta_indice = carpeta_area / indice
         carpeta_descarga = carpeta_indice / f"{nombre_area}_{fecha}_{timestamp}"
         carpeta_descarga.mkdir(parents=True, exist_ok=True)
         

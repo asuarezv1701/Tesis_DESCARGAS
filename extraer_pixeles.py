@@ -42,28 +42,38 @@ print(f"\n{C.B}{'='*60}")
 print("   EXTRACTOR DE PÍXELES - ÍNDICES DE VEGETACIÓN")
 print(f"{'='*60}{C.E}\n")
 
-# Buscar descargas disponibles
+# Buscar descargas disponibles con nueva estructura: descargas/area/indice/
 base_dir = Path("descargas")
 if not base_dir.exists():
     print(f"{C.R}✗ No hay carpeta de descargas{C.E}")
     exit(1)
 
-# Listar índices con descargas
-indices_disponibles = []
-for indice_dir in base_dir.iterdir():
-    if indice_dir.is_dir():
-        descargas = [d for d in indice_dir.iterdir() if d.is_dir()]
-        if descargas:
-            indices_disponibles.append((indice_dir.name, len(descargas)))
+# Listar áreas y sus índices con descargas
+areas_disponibles = []
+for area_dir in base_dir.iterdir():
+    if area_dir.is_dir():
+        indices_en_area = []
+        for indice_dir in area_dir.iterdir():
+            if indice_dir.is_dir():
+                descargas = [d for d in indice_dir.iterdir() if d.is_dir()]
+                if descargas:
+                    indices_en_area.append((indice_dir.name, len(descargas)))
+        
+        if indices_en_area:
+            areas_disponibles.append((area_dir.name, indices_en_area))
 
-if not indices_disponibles:
+if not areas_disponibles:
     print(f"{C.R}✗ No hay descargas disponibles para extraer{C.E}")
     exit(1)
 
 print(f"{C.Y}Descargas encontradas:{C.E}")
-for indice, count in indices_disponibles:
-    print(f"  • {indice}: {count} carpetas")
-print()
+total_indices = 0
+for area, indices in areas_disponibles:
+    print(f"  • Área: {area}")
+    for indice, count in indices:
+        print(f"    - {indice}: {count} carpetas")
+        total_indices += 1
+print(f"\nTotal: {total_indices} índices en {len(areas_disponibles)} área(s)\n")
 
 confirmar = input(f"{C.Y}¿Extraer píxeles de todas las descargas? (s/n): {C.E}").strip().lower()
 
@@ -77,45 +87,48 @@ try:
     import numpy as np
     total_extraidos = 0
     
-    for indice, count in indices_disponibles:
-        print(f"{C.Y}Procesando {indice}...{C.E}")
+    for area, indices in areas_disponibles:
+        print(f"{C.B}Procesando área: {area}{C.E}")
         
-        indice_path = base_dir / indice
-        for descarga_dir in indice_path.iterdir():
-            if descarga_dir.is_dir():
-                # Buscar archivo .tiff
-                tiff_files = list(descarga_dir.glob("*.tiff")) + list(descarga_dir.glob("*.tif"))
-                if tiff_files:
-                    tiff_file = tiff_files[0]
-                    print(f"  Extrayendo: {descarga_dir.name}")
-                    
-                    try:
-                        # Extraer píxeles
-                        pixeles, crs = extraer_valores_tiff(str(tiff_file), indice)
+        for indice, count in indices:
+            print(f"  {C.Y}Procesando {indice}...{C.E}")
+            
+            indice_path = base_dir / area / indice
+            for descarga_dir in indice_path.iterdir():
+                if descarga_dir.is_dir():
+                    # Buscar archivo .tiff
+                    tiff_files = list(descarga_dir.glob("*.tiff")) + list(descarga_dir.glob("*.tif"))
+                    if tiff_files:
+                        tiff_file = tiff_files[0]
+                        print(f"    Extrayendo: {descarga_dir.name}")
                         
-                        if pixeles:
-                            # Crear carpeta valores_pixeles
-                            carpeta_valores = descarga_dir / "valores_pixeles"
-                            carpeta_valores.mkdir(exist_ok=True)
+                        try:
+                            # Extraer píxeles
+                            pixeles, crs = extraer_valores_tiff(str(tiff_file), indice)
                             
-                            # Guardar CSV
-                            df = pd.DataFrame(pixeles)
-                            csv_path = carpeta_valores / f"pixeles_{indice}_{descarga_dir.name}.csv"
-                            df.to_csv(csv_path, index=False)
-                            
-                            # Guardar Shapefile
-                            geometry = [Point(p['longitude'], p['latitude']) for p in pixeles]
-                            gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=crs)
-                            shp_path = carpeta_valores / f"pixeles_{indice}_{descarga_dir.name}.shp"
-                            gdf.to_file(shp_path)
-                            
-                            print(f"  {C.G}✓ {len(pixeles)} píxeles extraídos{C.E}")
-                            total_extraidos += len(pixeles)
-                        else:
-                            print(f"  {C.Y}⚠ No se encontraron píxeles válidos{C.E}")
-                            
-                    except Exception as e:
-                        print(f"  {C.R}✗ Error: {e}{C.E}")
+                            if pixeles:
+                                # Crear carpeta valores_pixeles
+                                carpeta_valores = descarga_dir / "valores_pixeles"
+                                carpeta_valores.mkdir(exist_ok=True)
+                                
+                                # Guardar CSV
+                                df = pd.DataFrame(pixeles)
+                                csv_path = carpeta_valores / f"pixeles_{indice}_{descarga_dir.name}.csv"
+                                df.to_csv(csv_path, index=False)
+                                
+                                # Guardar Shapefile
+                                geometry = [Point(p['longitude'], p['latitude']) for p in pixeles]
+                                gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=crs)
+                                shp_path = carpeta_valores / f"pixeles_{indice}_{descarga_dir.name}.shp"
+                                gdf.to_file(shp_path)
+                                
+                                print(f"    {C.G}✓ {len(pixeles)} píxeles extraídos{C.E}")
+                                total_extraidos += len(pixeles)
+                            else:
+                                print(f"    {C.Y}⚠ No se encontraron píxeles válidos{C.E}")
+                                
+                        except Exception as e:
+                            print(f"    {C.R}✗ Error: {e}{C.E}")
     
     print(f"\n{C.B}{'='*60}")
     print(f"EXTRACCIÓN COMPLETADA")

@@ -97,11 +97,23 @@ while fecha_inicio is None or fecha_fin is None:
 # 3. SELECCIÓN DE SHAPEFILE
 # Buscar todos los shapefiles
 shapefiles_dir = Path("shapefiles")
-shapefiles = list(shapefiles_dir.glob("**/*.shp"))
+todos_los_shp = list(shapefiles_dir.glob("**/*.shp"))
+
+# Filtrar solo shapefiles válidos (que tengan .shx, .dbf, etc.)
+shapefiles = []
+for shp in todos_los_shp:
+    # Verificar que existan los archivos complementarios mínimos
+    shx_file = shp.with_suffix('.shx')
+    dbf_file = shp.with_suffix('.dbf')
+    
+    if shx_file.exists() and dbf_file.exists():
+        shapefiles.append(shp)
+    else:
+        print(f"{C.Y}⚠️ Shapefile incompleto omitido: {shp.name} (falta .shx o .dbf){C.E}")
 
 if not shapefiles:
-    print(f"{C.R}✗ No se encontró ningún shapefile en shapefiles/{C.E}")
-    print(f"{C.Y}Coloca tu shapefile (.shp) en la carpeta shapefiles/{C.E}")
+    print(f"{C.R}✗ No se encontró ningún shapefile válido en shapefiles/{C.E}")
+    print(f"{C.Y}Asegúrate de que tu shapefile tenga todos los archivos: .shp, .shx, .dbf, .prj{C.E}")
     exit(1)
 
 shapefile_seleccionado = None
@@ -110,9 +122,14 @@ shapefile_path = None
 while shapefile_seleccionado is None:
     print(f"{C.Y}ÁREAS DISPONIBLES:{C.E}")
     
-    # Mostrar shapefiles disponibles
+    # Mostrar shapefiles disponibles con nombre de carpeta si está en subcarpeta
     for idx, shp in enumerate(shapefiles, 1):
-        print(f"  {idx}. {shp.stem}")
+        # Si está en una subcarpeta, mostrar el nombre de la carpeta
+        if shp.parent != shapefiles_dir:
+            nombre_display = shp.parent.name
+        else:
+            nombre_display = shp.stem
+        print(f"  {idx}. {nombre_display}")
     
     print()
     seleccion_shp = input(f"{C.G}Selecciona el número del área a usar: {C.E}").strip()
@@ -125,7 +142,13 @@ while shapefile_seleccionado is None:
         
         shapefile_seleccionado = shapefiles[idx_shp]
         shapefile_path = str(shapefile_seleccionado)
-        print(f"{C.G}✓ Área seleccionada: {shapefile_seleccionado.stem}{C.E}\n")
+        
+        # Mostrar nombre de carpeta en la confirmación también
+        if shapefile_seleccionado.parent != shapefiles_dir:
+            nombre_confirmacion = shapefile_seleccionado.parent.name
+        else:
+            nombre_confirmacion = shapefile_seleccionado.stem
+        print(f"{C.G}✓ Área seleccionada: {nombre_confirmacion}{C.E}\n")
         
     except ValueError:
         print(f"{C.R}✗ Debes ingresar un número válido. Intenta de nuevo.{C.E}\n")
@@ -134,7 +157,12 @@ while shapefile_seleccionado is None:
 print(f"{C.B}{'='*60}")
 print("RESUMEN DE DESCARGA:")
 print(f"{'='*60}{C.E}")
-print(f"  Área:    {shapefile_seleccionado.stem}")
+# Mostrar nombre de carpeta consistente
+if shapefile_seleccionado.parent != shapefiles_dir:
+    nombre_area = shapefile_seleccionado.parent.name
+else:
+    nombre_area = shapefile_seleccionado.stem
+print(f"  Área:    {nombre_area}")
 print(f"  Índices: {', '.join(indices_seleccionados)}")
 print(f"  Desde:   {fecha_inicio_str}")
 print(f"  Hasta:   {fecha_fin_str}")
@@ -160,12 +188,18 @@ try:
     for i, indice in enumerate(indices_seleccionados, 1):
         print(f"\n{C.Y}[{i}/{len(indices_seleccionados)}] Descargando {indice}...{C.E}")
         
+        # Determinar el nombre del área basándose en la carpeta o archivo
+        if shapefile_seleccionado.parent != shapefiles_dir:
+            nombre_area = shapefile_seleccionado.parent.name
+        else:
+            nombre_area = shapefile_seleccionado.stem
+        
         resultado = descargador.descargar_indice(
             shapefile_path=shapefile_path,
             indice=indice,
             fecha_inicio=fecha_inicio_str,
             fecha_fin=fecha_fin_str,
-            nombre_area=shapefile_seleccionado.stem,
+            nombre_area=nombre_area,
             max_cloud=30
         )
         

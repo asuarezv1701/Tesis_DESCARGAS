@@ -30,6 +30,9 @@ descargas/
 *.tif
 *.tiff
 
+# Informes generados
+informes/
+
 # Archivos temporales
 *.tmp
 *.temp

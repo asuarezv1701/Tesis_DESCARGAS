@@ -17,6 +17,66 @@ from matplotlib.patches import Rectangle
 import pandas as pd
 from datetime import datetime
 
+def obtener_areas_disponibles():
+    """
+    Obtiene las áreas disponibles en la carpeta de descargas
+    
+    Returns:
+        list: Lista de nombres de áreas disponibles
+    """
+    base_dir = Path("descargas")
+    if not base_dir.exists():
+        return []
+    
+    areas = []
+    for area_dir in base_dir.iterdir():
+        if area_dir.is_dir():
+            # Verificar si tiene al menos un índice con datos
+            tiene_datos = False
+            for indice_dir in area_dir.iterdir():
+                if indice_dir.is_dir():
+                    # Verificar si hay carpetas de descarga
+                    if any(d.is_dir() for d in indice_dir.iterdir()):
+                        tiene_datos = True
+                        break
+            
+            if tiene_datos:
+                areas.append(area_dir.name)
+    
+    return areas
+
+def seleccionar_area():
+    """
+    Permite al usuario seleccionar un área disponible
+    
+    Returns:
+        str: Nombre del área seleccionada o None si no hay áreas
+    """
+    areas = obtener_areas_disponibles()
+    
+    if not areas:
+        print("⚠️ No se encontraron áreas con datos")
+        return None
+    
+    if len(areas) == 1:
+        print(f"Área detectada: {areas[0]}")
+        return areas[0]
+    
+    print("Áreas disponibles:")
+    for i, area in enumerate(areas, 1):
+        print(f"  {i}. {area}")
+    
+    while True:
+        try:
+            seleccion = input(f"Selecciona área (1-{len(areas)}): ").strip()
+            idx = int(seleccion) - 1
+            if 0 <= idx < len(areas):
+                return areas[idx]
+            else:
+                print(f"Por favor selecciona un número entre 1 y {len(areas)}")
+        except ValueError:
+            print("Por favor ingresa un número válido")
+
 # Configuración de paletas de colores por índice
 PALETAS_COLORES = {
     'NDVI': {
@@ -65,24 +125,25 @@ PALETAS_COLORES = {
 }
 
 
-def encontrar_archivo_mas_reciente(indice):
+def encontrar_archivo_mas_reciente(indice, area):
     """
-    Encuentra el shapefile más reciente para un índice específico
+    Encuentra el shapefile más reciente para un índice y área específicos
     
     Args:
         indice: Nombre del índice (NDVI, NDRE, MSAVI, RECI, NDMI)
+        area: Nombre del área
     
     Returns:
         Path del shapefile o None si no se encuentra
     """
-    ruta_descargas = Path('./descargas') / indice
+    ruta_descargas = Path('./descargas') / area / indice
     
     if not ruta_descargas.exists():
-        print(f"⚠️ No se encontró la carpeta: {ruta_descargas}")
+        print(f"⚠️ No se encontraron shapefiles en: {ruta_descargas}")
         return None
     
-    # Buscar todos los shapefiles de píxeles válidos
-    shapefiles = list(ruta_descargas.rglob('*_pixeles_validos.shp'))
+    # Buscar todos los shapefiles de píxeles extraídos
+    shapefiles = list(ruta_descargas.rglob(f'pixeles_{indice}_*.shp'))
     
     if not shapefiles:
         print(f"⚠️ No se encontraron shapefiles en: {ruta_descargas}")
@@ -93,7 +154,7 @@ def encontrar_archivo_mas_reciente(indice):
     return shapefile_reciente
 
 
-def visualizar_indice(indice, shapefile_path=None, guardar=True):
+def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
     """
     Visualiza un índice de vegetación con su paleta de colores específica
     
@@ -101,6 +162,7 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
         indice: Nombre del índice (NDVI, NDRE, MSAVI, RECI, NDMI)
         shapefile_path: Ruta al shapefile (opcional, busca automáticamente)
         guardar: Si True, guarda la imagen
+        area: Nombre del área (requerido si no se especifica shapefile_path)
     """
     print(f"\n{'='*60}")
     print(f"Visualizando índice: {indice}")
@@ -108,7 +170,10 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
     
     # Buscar shapefile si no se proporciona
     if shapefile_path is None:
-        shapefile_path = encontrar_archivo_mas_reciente(indice)
+        if area is None:
+            print("❌ Error: Debe especificar área o shapefile_path")
+            return False
+        shapefile_path = encontrar_archivo_mas_reciente(indice, area)
         if shapefile_path is None:
             return False
     
@@ -148,31 +213,37 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
     cmap = mcolors.ListedColormap(config['colors'])
     norm = mcolors.BoundaryNorm(config['bounds'], cmap.N)
     
-    # Crear figura
-    fig, ax = plt.subplots(figsize=(14, 12))
+    # Crear figura con fondo oscuro para mejor contraste
+    plt.style.use('dark_background')
+    fig, ax = plt.subplots(figsize=(14, 12), facecolor='#2F2F2F')
+    ax.set_facecolor('#1C1C1C')  # Fondo del área de ploteo más oscuro
     
-    # Plotear datos
+    # Plotear datos con puntos más grandes
     gdf_validos.plot(
         column=indice,
         ax=ax,
         cmap=cmap,
         norm=norm,
-        edgecolor='none',
+        edgecolor='white',      # Borde blanco para mejor definición
+        linewidth=0.1,         # Línea muy fina 
         legend=False,
-        markersize=20,
-        alpha=0.9
+        markersize=50,          # Puntos más grandes (era 20)
+        alpha=0.95              # Más opacidad para mejor visibilidad
     )
     
-    # Configurar título y etiquetas
-    ax.set_title(config['titulo'], fontsize=18, fontweight='bold', pad=20)
-    ax.set_xlabel('Longitud', fontsize=12)
-    ax.set_ylabel('Latitud', fontsize=12)
+    # Configurar título y etiquetas con colores para fondo oscuro
+    ax.set_title(config['titulo'], fontsize=18, fontweight='bold', pad=20, color='white')
+    ax.set_xlabel('Longitud', fontsize=12, color='white')
+    ax.set_ylabel('Latitud', fontsize=12, color='white')
     
-    # Agregar descripción
+    # Configurar colores de los ticks
+    ax.tick_params(colors='white')
+    
+    # Agregar descripción con mejor contraste
     ax.text(0.5, -0.08, config['descripcion'], 
             transform=ax.transAxes,
-            ha='center', fontsize=10, style='italic',
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+            ha='center', fontsize=10, style='italic', color='white',
+            bbox=dict(boxstyle='round', facecolor='#404040', alpha=0.8, edgecolor='gray'))
     
     # Crear leyenda personalizada
     legend_elements = []
@@ -181,7 +252,7 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
             Rectangle((0, 0), 1, 1, fc=color, edgecolor='black', linewidth=0.5, label=label)
         )
     
-    # Agregar leyenda
+    # Agregar leyenda con estilo para fondo oscuro
     legend = ax.legend(
         handles=legend_elements,
         title=f'Rangos de {indice}',
@@ -191,10 +262,15 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
         title_fontsize=12,
         frameon=True,
         fancybox=True,
-        shadow=True
+        shadow=True,
+        facecolor='#404040',     # Fondo gris oscuro para la leyenda
+        edgecolor='gray',        # Borde gris
+        labelcolor='white'       # Texto blanco
     )
+    # Cambiar color del título de la leyenda
+    legend.get_title().set_color('white')
     
-    # Agregar información adicional
+    # Agregar información adicional con colores para fondo oscuro
     info_text = f"Píxeles: {len(gdf_validos)}\n"
     info_text += f"Rango: {gdf_validos[indice].min():.3f} - {gdf_validos[indice].max():.3f}\n"
     info_text += f"Media: {gdf_validos[indice].mean():.3f}"
@@ -203,9 +279,10 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
             transform=ax.transAxes,
             fontsize=9,
             verticalalignment='top',
-            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            color='white',
+            bbox=dict(boxstyle='round', facecolor='#404040', alpha=0.9, edgecolor='gray'))
     
-    # Agregar fecha
+    # Agregar fecha con color para fondo oscuro
     fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
     ax.text(0.98, 0.02, f'Generado: {fecha_actual}',
             transform=ax.transAxes,
@@ -213,7 +290,7 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
             ha='right',
             va='bottom',
             style='italic',
-            color='gray')
+            color='lightgray')  # Color más claro para mejor visibilidad
     
     plt.tight_layout()
     
@@ -225,16 +302,23 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = output_dir / f'mapa_{indice}_{timestamp}.png'
         
-        plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='#2F2F2F')
         print(f"\n💾 Imagen guardada: {output_file}")
     
     plt.show()
+    
+    # Resetear estilo para no afectar otras visualizaciones
+    plt.style.use('default')
+    
     return True
 
 
-def visualizar_todos_indices():
+def visualizar_todos_indices(area):
     """
     Visualiza todos los índices disponibles
+    
+    Args:
+        area: Nombre del área seleccionada
     """
     print("\n" + "="*60)
     print("VISUALIZACIÓN DE TODOS LOS ÍNDICES DE VEGETACIÓN")
@@ -244,7 +328,7 @@ def visualizar_todos_indices():
     resultados = []
     
     for indice in indices:
-        exito = visualizar_indice(indice)
+        exito = visualizar_indice(indice, area=area)
         resultados.append((indice, exito))
     
     # Resumen
@@ -260,14 +344,15 @@ def visualizar_todos_indices():
     print(f"\nTotal: {exitosos}/{len(indices)} índices visualizados correctamente")
 
 
-def generar_informe_estadistico(indice):
+def generar_informe_estadistico(indice, area):
     """
     Genera un informe estadístico detallado para un índice
     
     Args:
         indice: Nombre del índice (NDVI, NDRE, MSAVI, RECI, NDMI)
+        area: Nombre del área seleccionada
     """
-    shapefile_path = encontrar_archivo_mas_reciente(indice)
+    shapefile_path = encontrar_archivo_mas_reciente(indice, area)
     if shapefile_path is None:
         return
     
@@ -345,9 +430,12 @@ def generar_informe_estadistico(indice):
     print(f"\n📄 Informe guardado: {output_file}")
 
 
-def menu_principal():
+def menu_principal(area):
     """
     Menú interactivo para visualizar índices
+    
+    Args:
+        area: Nombre del área seleccionada
     """
     print("\n" + "="*60)
     print("SISTEMA DE VISUALIZACIÓN DE ÍNDICES DE VEGETACIÓN")
@@ -370,24 +458,24 @@ def menu_principal():
                 print("\n👋 ¡Hasta luego!")
                 break
             elif opcion == '1':
-                visualizar_indice('NDVI')
+                visualizar_indice('NDVI', area=area)
             elif opcion == '2':
-                visualizar_indice('NDRE')
+                visualizar_indice('NDRE', area=area)
             elif opcion == '3':
-                visualizar_indice('MSAVI')
+                visualizar_indice('MSAVI', area=area)
             elif opcion == '4':
-                visualizar_indice('RECI')
+                visualizar_indice('RECI', area=area)
             elif opcion == '5':
-                visualizar_indice('NDMI')
+                visualizar_indice('NDMI', area=area)
             elif opcion == '6':
-                visualizar_todos_indices()
+                visualizar_todos_indices(area)
             elif opcion == '7':
                 print("\nÍndices disponibles:")
                 print("  1. NDVI  2. NDRE  3. MSAVI  4. RECI  5. NDMI")
                 idx = input("Selecciona índice para informe (1-5): ").strip()
                 indices_map = {'1': 'NDVI', '2': 'NDRE', '3': 'MSAVI', '4': 'RECI', '5': 'NDMI'}
                 if idx in indices_map:
-                    generar_informe_estadistico(indices_map[idx])
+                    generar_informe_estadistico(indices_map[idx], area)
                 else:
                     print("❌ Opción inválida")
             else:
@@ -408,5 +496,14 @@ if __name__ == "__main__":
     if not Path('./descargas').exists():
         print("⚠️ Advertencia: No se encontró la carpeta 'descargas'")
         print("   Asegúrate de ejecutar este script desde el directorio raíz del proyecto")
+        sys.exit(1)
     
-    menu_principal()
+    # Seleccionar área
+    area_seleccionada = seleccionar_area()
+    if not area_seleccionada:
+        print("❌ No hay áreas disponibles para visualizar")
+        sys.exit(1)
+    
+    print(f"\n📍 Trabajando con área: {area_seleccionada}\n")
+    
+    menu_principal(area_seleccionada)
