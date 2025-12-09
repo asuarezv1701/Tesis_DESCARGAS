@@ -33,6 +33,9 @@ descargas/
 # Informes generados
 informes/
 
+# Visualizaciones generadas
+visualizaciones/
+
 # Archivos temporales
 *.tmp
 *.temp
