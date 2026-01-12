@@ -195,6 +195,23 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
     
     # Filtrar valores válidos
     gdf_validos = gdf[gdf[indice].notna()].copy()
+    
+    # Cargar el polígono del área y filtrar solo píxeles dentro del polígono
+    try:
+        area_shapefile_dir = Path(f"shapefiles/{area}")
+        if area_shapefile_dir.exists():
+            shapefiles = list(area_shapefile_dir.glob("*.shp"))
+            if shapefiles:
+                shapefile_area = gpd.read_file(shapefiles[0])
+                # Asegurar que ambos GeoDataFrames tengan el mismo CRS
+                if gdf_validos.crs != shapefile_area.crs:
+                    gdf_validos = gdf_validos.to_crs(shapefile_area.crs)
+                # Filtrar solo puntos dentro del polígono
+                gdf_validos = gpd.sjoin(gdf_validos, shapefile_area, predicate='within', how='inner')
+                print(f"📍 Píxeles dentro del polígono: {len(gdf_validos)}")
+    except Exception as e:
+        print(f"⚠️ Advertencia: No se pudo filtrar por polígono: {e}")
+    
     print(f"📊 Píxeles válidos: {len(gdf_validos)}")
     
     if len(gdf_validos) == 0:

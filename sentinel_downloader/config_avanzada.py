@@ -145,9 +145,17 @@ class GestorConfiguracionAvanzada:
         )
         handler_archivo.setFormatter(logging.Formatter(formato_personalizado))
         
-        # Configurar handler para consola
-        handler_consola = logging.StreamHandler()
+        # Configurar handler para consola con encoding UTF-8
+        import sys
+        handler_consola = logging.StreamHandler(sys.stdout)
         handler_consola.setFormatter(logging.Formatter(formato_personalizado))
+        
+        # Forzar encoding UTF-8 en Windows
+        if sys.platform == 'win32':
+            try:
+                sys.stdout.reconfigure(encoding='utf-8')
+            except:
+                pass  # Si falla, continuar sin reconfigurar
         
         # Aplicar configuraciones
         root_logger = logging.getLogger()

@@ -55,27 +55,55 @@ class GEEDownloader:
         try:
             # Buscar archivo JSON si no se especificó
             if service_account_json is None:
-                json_files = list(Path('.').glob('tesis-*.json'))
-                if json_files:
-                    service_account_json = str(json_files[0])
-                    self.logger.info(f"Usando service account: {json_files[0].name}")
+                # Buscar en múltiples ubicaciones
+                search_paths = [
+                    Path('.'),  # Directorio actual
+                    Path('..'),  # Directorio padre
+                    Path(__file__).parent.parent,  # Raíz del proyecto
+                ]
+                
+                for search_path in search_paths:
+                    json_files = list(search_path.glob('tesis-*.json'))
+                    if json_files:
+                        service_account_json = str(json_files[0].resolve())
+                        self.logger.info(f"Archivo JSON encontrado: {json_files[0].name}")
+                        break
             
             if service_account_json and Path(service_account_json).exists():
+                # Leer el email de la cuenta de servicio del JSON
+                import json
+                with open(service_account_json, 'r') as f:
+                    service_data = json.load(f)
+                    service_email = service_data['client_email']
+                
                 # Autenticar con service account
                 credentials = ee.ServiceAccountCredentials(
-                    email=None,  # Se lee del JSON
+                    email=service_email,
                     key_file=service_account_json
                 )
-                ee.Initialize(credentials)
-                self.logger.info("✓ Google Earth Engine inicializado con service account")
+                
+                # Intentar inicializar con el proyecto de la cuenta de servicio
+                try:
+                    ee.Initialize(credentials, project='tesis-478920', opt_url='https://earthengine-highvolume.googleapis.com')
+                    self.logger.info("Google Earth Engine inicializado con cuenta de servicio")
+                except Exception as init_error:
+                    self.logger.warning(f"Fallo inicialización con proyecto: {init_error}")
+                    # Intentar sin especificar proyecto
+                    ee.Initialize(credentials)
+                    self.logger.info("Google Earth Engine inicializado sin proyecto específico")
             else:
-                # Intentar inicialización normal
-                ee.Initialize()
-                self.logger.info("✓ Google Earth Engine inicializado")
+                # Intentar inicialización normal (autenticación de usuario)
+                try:
+                    ee.Initialize()
+                    self.logger.info("Google Earth Engine inicializado con credenciales de usuario")
+                except:
+                    self.logger.error("No se encontró archivo JSON y no hay autenticación de usuario")
+                    self.logger.info("Ejecuta: earthengine authenticate")
+                    raise
                 
         except Exception as e:
-            self.logger.error(f"✗ Error al inicializar GEE: {e}")
-            self.logger.info("Coloca el archivo tesis-*.json en la carpeta raíz")
+            self.logger.error(f"Error al inicializar GEE: {e}")
+            self.logger.info("Solucion: Coloca el archivo tesis-*.json en la carpeta raiz")
             raise
     
     def leer_shapefile(self, shapefile_path: str) -> ee.Geometry:

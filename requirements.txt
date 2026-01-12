@@ -14,6 +14,8 @@ urllib3<2.0          # Compatible with earthengine-api
 fiona>=1.8.0
 pyproj>=3.4.0
 sentinelhub>=3.9.0   # For Sentinel Hub API integration
+rtree>=1.0.0          # Spatial index for geopandas on Windows
+pyogrio>=0.7.2        # Fast I/O for GeoPackage/GeoParquet
 
 # Configuration and utilities
 python-dotenv>=0.19.0  # For .env file support
@@ -25,5 +27,6 @@ pandas>=1.3.0         # For data manipulation
 
 # Additional dependencies for pixel extraction and file processing
 Pillow>=9.0.0          # Image processing support
-GDAL>=3.4.0            # Geospatial Data Abstraction Library (for rasterio)
-# Note: On Windows, consider installing GDAL from conda-forge or OSGeo4W
+# Nota: evitamos instalar el paquete "GDAL" vía pip en Windows,
+# ya que las ruedas de rasterio/fiona incluyen las bibliotecas nativas de GDAL.
+# Si en el futuro necesitas importaciones directas de osgeo/gdal, instala una wheel precompilada de GDAL.
