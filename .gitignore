@@ -8,6 +8,11 @@ tesis-*.json
 venv/
 env/
 
+# Entornos de Conda (si se usa en lugar de venv)
+.conda/
+conda-meta/
+*.conda
+
 # Carpetas personales - NO subir
 pruebas_unitarias/
 pruebas_generales/

@@ -3,6 +3,7 @@ Script Simple de Descarga - Sentinel-2 con Google Earth Engine
 Pregunta índices y fechas, luego descarga múltiples imágenes
 """
 
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from sentinel_downloader.gee_downloader import GEEDownloader
@@ -56,43 +57,84 @@ while not indices_seleccionados:
 print(f"{C.G}✓ Índices seleccionados: {', '.join(indices_seleccionados)}{C.E}\n")
 
 # 2. SELECCIÓN DE FECHAS
+def detectar_ultima_fecha(directorio_descargas: str = "descargas") -> datetime | None:
+    """
+    Escanea la carpeta de descargas y retorna la fecha más reciente encontrada
+    en los nombres de archivos .tiff. Retorna None si no hay descargas previas.
+    """
+    patron_fecha = re.compile(r'_(\d{8})_')
+    directorio = Path(directorio_descargas)
+    
+    if not directorio.exists():
+        return None
+    
+    fechas = []
+    for tiff in directorio.glob("**/*.tiff"):
+        match = patron_fecha.search(tiff.name)
+        if match:
+            try:
+                fechas.append(datetime.strptime(match.group(1), "%Y%m%d"))
+            except ValueError:
+                continue
+    
+    return max(fechas) if fechas else None
+
+
 fecha_inicio = None
 fecha_fin = None
 diferencia = 0
 
-while fecha_inicio is None or fecha_fin is None:
-    print(f"{C.Y}RANGO DE FECHAS (mínimo 30 días):{C.E}")
-    print("Formato: YYYY-MM-DD (ejemplo: 2025-10-01)")
+ultima_fecha = detectar_ultima_fecha()
+
+if ultima_fecha is not None:
+    fecha_inicio = ultima_fecha + timedelta(days=1)
+    # Sumar 3 meses aproximando a 92 días para garantizar ≥ 30 días
+    fecha_fin = ultima_fecha + timedelta(days=92)
+    fecha_inicio_str = fecha_inicio.strftime("%Y-%m-%d")
+    fecha_fin_str = fecha_fin.strftime("%Y-%m-%d")
+    diferencia = (fecha_fin - fecha_inicio).days
+
+    print(f"{C.B}RANGO DE FECHAS (detectado automáticamente):{C.E}")
+    print(f"  Última imagen encontrada: {C.G}{ultima_fecha.strftime('%Y-%m-%d')}{C.E}")
+    print(f"  Inicio:  {C.G}{fecha_inicio_str}{C.E}")
+    print(f"  Fin:     {C.G}{fecha_fin_str}{C.E}")
+    print(f"  Total:   {diferencia} días")
     print()
-    
-    fecha_inicio_str = input(f"{C.G}Fecha de inicio: {C.E}").strip()
-    fecha_fin_str = input(f"{C.G}Fecha de fin: {C.E}").strip()
-    
-    try:
-        fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d")
-        fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d")
-        
-        # Validar que sea al menos 30 días
-        diferencia = (fecha_fin - fecha_inicio).days
-        
-        if diferencia < 0:
-            print(f"{C.R}✗ La fecha de fin debe ser posterior a la fecha de inicio. Intenta de nuevo.{C.E}\n")
+else:
+    print(f"{C.Y}No se encontraron descargas previas. Ingresa el rango de fechas manualmente.{C.E}\n")
+
+    while fecha_inicio is None or fecha_fin is None:
+        print(f"{C.Y}RANGO DE FECHAS (mínimo 30 días):{C.E}")
+        print("Formato: YYYY-MM-DD (ejemplo: 2025-10-01)")
+        print()
+
+        fecha_inicio_str = input(f"{C.G}Fecha de inicio: {C.E}").strip()
+        fecha_fin_str = input(f"{C.G}Fecha de fin: {C.E}").strip()
+
+        try:
+            fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d")
+            fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d")
+
+            diferencia = (fecha_fin - fecha_inicio).days
+
+            if diferencia < 0:
+                print(f"{C.R}✗ La fecha de fin debe ser posterior a la fecha de inicio. Intenta de nuevo.{C.E}\n")
+                fecha_inicio = None
+                fecha_fin = None
+                continue
+
+            if diferencia < 30:
+                print(f"{C.R}✗ El rango debe ser de al menos 30 días (tienes {diferencia} días). Intenta de nuevo.{C.E}\n")
+                fecha_inicio = None
+                fecha_fin = None
+                continue
+
+            print(f"{C.G}✓ Rango: {fecha_inicio_str} a {fecha_fin_str} ({diferencia} días){C.E}\n")
+
+        except ValueError:
+            print(f"{C.R}✗ Error en el formato de fecha. Usa YYYY-MM-DD (ejemplo: 2025-10-01). Intenta de nuevo.{C.E}\n")
             fecha_inicio = None
             fecha_fin = None
-            continue
-        
-        if diferencia < 30:
-            print(f"{C.R}✗ El rango debe ser de al menos 30 días (tienes {diferencia} días). Intenta de nuevo.{C.E}\n")
-            fecha_inicio = None
-            fecha_fin = None
-            continue
-        
-        print(f"{C.G}✓ Rango: {fecha_inicio_str} a {fecha_fin_str} ({diferencia} días){C.E}\n")
-        
-    except ValueError as e:
-        print(f"{C.R}✗ Error en el formato de fecha. Usa YYYY-MM-DD (ejemplo: 2025-10-01). Intenta de nuevo.{C.E}\n")
-        fecha_inicio = None
-        fecha_fin = None
 
 # 3. SELECCIÓN DE SHAPEFILE
 # Buscar todos los shapefiles

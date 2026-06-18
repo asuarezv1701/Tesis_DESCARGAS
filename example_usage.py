@@ -36,7 +36,9 @@ def example_test_download():
     print("=== EJEMPLO DE DESCARGA DE PRUEBA ===")
     
     # Tu ruta de shapefile - CAMBIA ESTO por tu shapefile real
-    shapefile_path = r"C:\ruta\a\tu\shapefile.shp"
+    # Ejemplo Windows: r"C:\ruta\a\tu\shapefile.shp"
+    # Ejemplo macOS/Linux: "shapefiles/UPIITA_contours_25nov.2025/UPIITA_contours_25Nov2025.shp"
+    shapefile_path = "shapefiles/UPIITA_contours_25nov.2025/UPIITA_contours_25Nov2025.shp"
     
     if not os.path.exists(shapefile_path):
         print(f"ERROR: Shapefile no encontrado: {shapefile_path}")
@@ -65,7 +67,8 @@ def example_test_download():
 def example_single_download():
     """Ejemplo: Descargar un período de tiempo específico"""
     print("=== EJEMPLO DE DESCARGA DE PERÍODO INDIVIDUAL ===")
-    
+    # Ejemplo: "shapefiles/UPIITA_contours_25nov.2025/UPIITA_contours_25Nov2025.shp"
+    shapefile_path = "shapefiles/UPIITA_contours_25nov.2025/UPIITA_contours_25Nov2025
     # Tu ruta de shapefile - CAMBIA ESTO
     shapefile_path = r"C:\ruta\a\tu\shapefile.shp"
     
@@ -95,7 +98,8 @@ def example_single_download():
 
 def example_batch_download():
     """Ejemplo: Descargar múltiples años en lotes"""
-    print("=== EJEMPLO DE DESCARGA EN LOTES ===")
+    # Ejemplo: "shapefiles/UPIITA_contours_25nov.2025/UPIITA_contours_25Nov2025.shp"
+    shapefile_path = "shapefiles/UPIITA_contours_25nov.2025/UPIITA_contours_25Nov2025==")
     
     # Tu ruta de shapefile - CAMBIA ESTO
     shapefile_path = r"C:\ruta\a\tu\shapefile.shp"

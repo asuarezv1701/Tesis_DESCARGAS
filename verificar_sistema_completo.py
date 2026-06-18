@@ -210,10 +210,17 @@ def verificar_credenciales():
         return True
     else:
         print_warning("Credenciales NO configuradas")
-        print_info("Ejecuta: .\\configurar_credenciales.ps1")
-        print_info("O configura manualmente:")
-        print_info("  $env:SENTINEL_CLIENT_ID = 'tu_client_id'")
-        print_info("  $env:SENTINEL_CLIENT_SECRET = 'tu_client_secret'")
+        import sys
+        if sys.platform == 'win32':
+            print_info("Ejecuta: .\\configurar_credenciales.ps1")
+            print_info("O configura manualmente:")
+            print_info("  $env:SENTINEL_CLIENT_ID = 'tu_client_id'")
+            print_info("  $env:SENTINEL_CLIENT_SECRET = 'tu_client_secret'")
+        else:
+            print_info("Configura las credenciales en tu shell:")
+            print_info("  export SENTINEL_CLIENT_ID='tu_client_id'")
+            print_info("  export SENTINEL_CLIENT_SECRET='tu_client_secret'")
+            print_info("O crea un archivo .env en la raíz del proyecto")
         return False
 
 

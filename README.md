@@ -2,6 +2,9 @@
 
 Sistema para descargar y analizar imágenes satelitales de vegetación usando Google Earth Engine.
 
+> **📱 Usuarios de macOS/Linux:** Las instrucciones de este README están enfocadas en Windows.  
+> Para instrucciones específicas de macOS/Linux, consulta [README_macOS.md](README_macOS.md)
+
 ---
 
 ## ¿Qué hace este programa?
