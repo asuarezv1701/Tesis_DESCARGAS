@@ -85,8 +85,12 @@ pip install -r requirements.txt
 Copia el archivo JSON de Google Earth Engine en la carpeta principal del proyecto. Su nombre
 debe empezar con `tesis-` (por ejemplo, `tesis-123456-abc.json`).
 
-> **Importante:** ese archivo es una credencial privada. Ya está listado en `.gitignore` para
-> que no se suba por accidente, pero tampoco lo incluyas al entregar el proyecto.
+El programa lo busca automáticamente en la carpeta del proyecto y en la carpeta superior, así
+que basta con dejarlo ahí. No hay que configurar ninguna ruta.
+
+> **Este archivo no está en el repositorio y no debe estarlo.** Lee la sección
+> [La credencial de Google Earth Engine](#la-credencial-de-google-earth-engine) para entender
+> por qué y cómo obtener la tuya.
 
 ### Paso 4 · Colocar tu shapefile
 
@@ -198,6 +202,78 @@ descargas/
 | Azul claro | Humedad moderada |
 | Azul | Buena humedad |
 | Azul oscuro | Alta humedad |
+
+---
+
+## La credencial de Google Earth Engine
+
+### Por qué existe este archivo
+
+Google Earth Engine no es de acceso libre: cada petición debe ir firmada por una identidad
+autorizada. Existen dos formas de autenticarse:
+
+| Método | Cómo funciona | Por qué no se usa aquí |
+|--------|---------------|------------------------|
+| **Cuenta de usuario** | Abre el navegador y pide iniciar sesión a mano | Requiere intervención humana en cada sesión; inviable para un proceso que descarga cientos de imágenes sin supervisión |
+| **Cuenta de servicio** *(la que usa este proyecto)* | Se identifica con un archivo de clave, sin intervención | Permite ejecutar el proceso completo de forma automática |
+
+Una **cuenta de servicio** es una identidad que pertenece al proyecto, no a una persona. El
+archivo `tesis-XXXXXX-XXXXXX.json` es su llave: contiene el identificador del proyecto, el
+correo de la cuenta de servicio y, sobre todo, una **clave privada criptográfica** con la que
+el programa firma cada petición a Google.
+
+### Por qué NO se sube al repositorio
+
+Ese archivo **es equivalente a una contraseña**. Quien lo tenga puede actuar como la cuenta de
+servicio sin necesidad de ninguna otra credencial. Las consecuencias de publicarlo serían:
+
+- **Uso indebido de la cuota.** Google Earth Engine limita el número de peticiones; un tercero
+  podría agotarla y dejar el proyecto sin servicio.
+- **Costos en la cuenta de Google Cloud.** La cuenta de servicio pertenece a un proyecto de
+  Google Cloud; su uso puede generar cargos facturables.
+- **Acceso a otros recursos.** Si en el futuro se le conceden más permisos, la misma llave los
+  heredaría.
+- **Imposibilidad de revocarla en silencio.** Una vez publicada en un repositorio, queda en el
+  historial de commits aunque se borre después; la única solución real es revocar la clave y
+  generar otra.
+
+Por eso, la regla general en cualquier proyecto de software es que **las credenciales nunca se
+versionan**: el código se comparte, los secretos no.
+
+### Cómo está protegido
+
+El archivo `.gitignore` incluye estas reglas, que impiden que git lo registre aunque se ejecute
+`git add -A`:
+
+```gitignore
+*.json          # Cualquier archivo JSON
+tesis-*.json    # Especificamente los de credenciales
+.env            # Variables de entorno
+```
+
+Puedes comprobar en cualquier momento que está correctamente ignorado:
+
+```bash
+git check-ignore -v ../tesis-478920-ejemplo.json
+```
+
+Si el comando responde con la regla que lo bloquea, la protección funciona. Si no responde
+nada, el archivo **sí** se subiría y hay que corregirlo antes de hacer commit.
+
+### Cómo obtener la tuya
+
+Si otra persona quiere ejecutar el proyecto, necesita generar su propia credencial:
+
+1. Entra a la [consola de Google Cloud](https://console.cloud.google.com/) y crea un proyecto.
+2. Habilita la **Google Earth Engine API** en ese proyecto.
+3. En *IAM y administración → Cuentas de servicio*, crea una cuenta de servicio.
+4. Genera una **clave JSON** para esa cuenta y descárgala.
+5. Registra la cuenta de servicio en [Earth Engine](https://signup.earthengine.google.com/).
+6. Renombra el archivo para que empiece con `tesis-` y colócalo en la carpeta del proyecto.
+
+> **Al entregar el proyecto**, verifica que el archivo JSON no esté incluido en el paquete. Si
+> en algún momento sospechas que la llave se expuso, revócala desde la consola de Google Cloud
+> y genera una nueva: es un trámite de un par de minutos.
 
 ---
 

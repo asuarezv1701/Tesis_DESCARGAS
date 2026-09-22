@@ -1,6 +1,5 @@
 # Sentinel-2 Satellite Data Downloader with Google Earth Engine
 # INSTALACIÓN: pip install -r requirements.txt
-# OPCIÓN ALTERNATIVA: conda env create -f environment.yml (ver NOTAS_CONDA.txt en raíz)
 
 # Core dependencies for Google Earth Engine
 earthengine-api>=0.1.384
