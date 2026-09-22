@@ -46,7 +46,7 @@ print(f"{'='*60}{C.E}\n")
 # Buscar descargas disponibles con nueva estructura: descargas/area/indice/
 base_dir = Path("descargas")
 if not base_dir.exists():
-    print(f"{C.R}✗ No hay carpeta de descargas{C.E}")
+    print(f"{C.R}[ERROR] No hay carpeta de descargas{C.E}")
     exit(1)
 
 # Listar áreas y sus índices con descargas
@@ -64,7 +64,7 @@ for area_dir in base_dir.iterdir():
             areas_disponibles.append((area_dir.name, indices_en_area))
 
 if not areas_disponibles:
-    print(f"{C.R}✗ No hay descargas disponibles para extraer{C.E}")
+    print(f"{C.R}[ERROR] No hay descargas disponibles para extraer{C.E}")
     exit(1)
 
 print(f"{C.Y}Descargas encontradas:{C.E}")
@@ -79,12 +79,12 @@ print(f"\nTotal: {total_indices} índices en {len(areas_disponibles)} área(s)\n
 confirmar = input(f"{C.Y}¿Extraer píxeles de todas las descargas? (s/n): {C.E}").strip().lower()
 
 if confirmar != 's':
-    print(f"{C.R}✗ Extracción cancelada{C.E}")
+    print(f"{C.Y}[CANCELADO] Extracción cancelada por el usuario{C.E}")
     exit(0)
 
 forzar = input(f"{C.Y}¿Re-extraer también las carpetas que ya tienen valores_pixeles? (s/N): {C.E}").strip().lower() == 's'
 if not forzar:
-    print(f"{C.G}✓ Solo se procesarán carpetas nuevas (sin valores_pixeles){C.E}")
+    print(f"{C.G}[OK] Solo se procesarán carpetas nuevas (sin valores_pixeles){C.E}")
 
 print(f"\n{C.B}Iniciando extracción...{C.E}\n")
 
@@ -131,13 +131,13 @@ try:
                                 shp_path = carpeta_valores / f"pixeles_{indice}_{descarga_dir.name}.shp"
                                 gdf.to_file(shp_path)
                                 
-                                print(f"    {C.G}✓ {len(pixeles)} píxeles extraídos{C.E}")
+                                print(f"    {C.G}[OK] {len(pixeles)} píxeles extraídos{C.E}")
                                 total_extraidos += len(pixeles)
                             else:
-                                print(f"    {C.Y}⚠ No se encontraron píxeles válidos{C.E}")
+                                print(f"    {C.Y}[AVISO] No se encontraron píxeles válidos{C.E}")
                                 
                         except Exception as e:
-                            print(f"    {C.R}✗ Error: {e}{C.E}")
+                            print(f"    {C.R}[ERROR] Error: {e}{C.E}")
     
     print(f"\n{C.B}{'='*60}")
     print(f"EXTRACCIÓN COMPLETADA")
@@ -147,5 +147,5 @@ try:
     print(f"{C.Y}Los archivos CSV y Shapefile están en cada carpeta de descarga{C.E}\n")
     
 except Exception as e:
-    print(f"\n{C.R}✗ ERROR: {e}{C.E}\n")
+    print(f"\n{C.R}[ERROR] ERROR: {e}{C.E}\n")
     exit(1)

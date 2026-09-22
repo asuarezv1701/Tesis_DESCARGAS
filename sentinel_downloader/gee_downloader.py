@@ -259,7 +259,7 @@ class GEEDownloader:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             
-            self.logger.info(f"✓ Descargado: {archivo_tiff.name}")
+            self.logger.info(f"[OK] Descargado: {archivo_tiff.name}")
             
             return {
                 'exito': True,

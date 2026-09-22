@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore', category=FutureWarning, module='google.api_cor
 
 def verificar_todo():
     """Verifica las dependencias críticas del proyecto."""
-    print("\n🔍 Verificando dependencias críticas...\n")
+    print("\nVerificando dependencias críticas...\n")
     
     modulos_criticos = [
         ('rasterio', 'Procesamiento raster'),
@@ -30,19 +30,19 @@ def verificar_todo():
     for modulo, desc in modulos_criticos:
         try:
             __import__(modulo)
-            print(f"✅ {modulo:12s} - {desc}")
+            print(f"[OK] {modulo:12s} - {desc}")
         except ImportError:
             errores.append(modulo)
-            print(f"❌ {modulo:12s} - FALTA")
+            print(f"[ERROR] {modulo:12s} - FALTA")
     
     print()
     
     if errores:
-        print("❌ ERROR: Instala las dependencias faltantes:")
+        print("[ERROR] ERROR: Instala las dependencias faltantes:")
         print("   pip install --no-cache-dir -r requirements.txt\n")
         return 1
     else:
-        print("✅ Sistema listo - Todas las dependencias instaladas\n")
+        print("[OK] Sistema listo - Todas las dependencias instaladas\n")
         return 0
 
 if __name__ == '__main__':

@@ -1,233 +1,238 @@
 # Descargador de Imágenes Sentinel-2
 
-Sistema para descargar y analizar imágenes satelitales de vegetación usando Google Earth Engine.
-
-> **📱 Usuarios de macOS/Linux:** Las instrucciones de este README están enfocadas en Windows.  
-> Para instrucciones específicas de macOS/Linux, consulta [README_macOS.md](README_macOS.md)
+Descarga imágenes satelitales de tu área de estudio y calcula automáticamente cinco índices
+de vegetación. Funciona en **Windows, macOS y Linux**.
 
 ---
 
 ## ¿Qué hace este programa?
 
-Este sistema descarga imágenes satelitales Sentinel-2 de cualquier zona del mundo y calcula automáticamente 5 índices de vegetación que te ayudan a analizar el estado de las plantas:
+A partir de un polígono que tú defines, el sistema:
 
-- **NDVI** - Mide la salud general de la vegetación
-- **NDRE** - Detecta el nivel de clorofila en las hojas
-- **MSAVI** - Útil cuando hay mucha tierra visible entre las plantas
-- **RECI** - Mide clorofila con mayor precisión que NDVI
-- **NDMI** - Indica el contenido de agua en la vegetación
+1. Busca todas las imágenes Sentinel-2 disponibles en el rango de fechas que elijas.
+2. Calcula cinco índices de vegetación sobre cada imagen.
+3. Extrae el valor de cada píxel a tablas que puedes abrir en Excel.
+4. Genera mapas de colores listos para interpretar.
 
-El sistema descarga todas las imágenes disponibles en el rango de fechas que especifiques, no solo una imagen.
+### Los cinco índices
+
+| Índice | Qué mide | Para qué sirve |
+|--------|----------|----------------|
+| **NDVI** | Vigor general de la vegetación | Estado de salud global |
+| **NDRE** | Clorofila y nitrógeno | Detecta estrés antes de que sea visible |
+| **MSAVI** | Cobertura, descontando el suelo | Útil con vegetación escasa |
+| **RECI** | Concentración de clorofila | Evaluación nutricional |
+| **NDMI** | Contenido de agua en la hoja | Estrés hídrico |
+
+> **Descarga incremental.** El sistema lleva un registro (`manifest.json`) de lo ya
+> descargado. La primera ejecución baja toda la base; las siguientes sólo traen lo que falta.
 
 ---
 
-## Requisitos previos
+## Antes de empezar
 
-Necesitas tener instalado en tu computadora:
+Necesitas tres cosas:
 
-1. **Python 3.10 o superior** - Descarga desde [python.org](https://www.python.org/downloads/)
-2. **Credenciales de Google Earth Engine** - Archivo JSON con tus credenciales de acceso
-3. **Shapefile de tu área de estudio** - Archivo .shp que define la zona geográfica a analizar
+| Requisito | Detalle |
+|-----------|---------|
+| **Python 3.11 – 3.13** | Recomendado 3.12. Verifica con `python3 --version` |
+| **Credenciales de Google Earth Engine** | Archivo JSON de cuenta de servicio |
+| **Shapefile de tu área** | Los cuatro archivos: `.shp`, `.shx`, `.dbf`, `.prj` |
+
+> **Sobre Python.** Se recomienda 3.12 porque las bibliotecas geoespaciales ya no publican
+> versiones nuevas para 3.10, y en sistemas operativos recientes las versiones antiguas dejan
+> de funcionar.
 
 ---
 
 ## Instalación
 
-## Instalación
+Estos pasos se realizan **una sola vez**.
 
-Estos pasos solo necesitas hacerlos una vez.
+### Paso 1 · Crear el ambiente virtual
 
-### Paso 1: Descargar el proyecto
+<details open>
+<summary><b>macOS / Linux</b></summary>
 
-Descarga el proyecto completo y descomprímelo en una carpeta de tu computadora.
+```bash
+cd ruta/al/proyecto/Tesis_DESCARGAS
+python3.12 -m venv venv
+source venv/bin/activate
+```
+</details>
 
-### Paso 2: Instalar las dependencias
-
-Abre PowerShell en la carpeta donde descargaste el proyecto y ejecuta estos comandos:
+<details>
+<summary><b>Windows (PowerShell)</b></summary>
 
 ```powershell
-# Crear un ambiente virtual de Python
-python -m venv venv
-
-# Activar el ambiente virtual
+cd ruta\al\proyecto\Tesis_DESCARGAS
+py -3.12 -m venv venv
 .\venv\Scripts\Activate.ps1
+```
+</details>
 
-# Instalar todas las librerías necesarias
+> Debes activar el ambiente **cada vez** que abras una terminal nueva. Sabrás que está activo
+> porque el prompt empieza con `(venv)`.
+
+### Paso 2 · Instalar las librerías
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Paso 3: Configurar tus credenciales
+### Paso 3 · Colocar tus credenciales
 
-Coloca tu archivo JSON de credenciales de Google Earth Engine en la carpeta principal del proyecto. El archivo debe tener un nombre que empiece con `tesis-` (por ejemplo: `tesis-123456-abc.json`).
+Copia el archivo JSON de Google Earth Engine en la carpeta principal del proyecto. Su nombre
+debe empezar con `tesis-` (por ejemplo, `tesis-123456-abc.json`).
 
-### Paso 4: Agregar tu shapefile
+> **Importante:** ese archivo es una credencial privada. Ya está listado en `.gitignore` para
+> que no se suba por accidente, pero tampoco lo incluyas al entregar el proyecto.
 
-Coloca tu shapefile en la carpeta `shapefiles/`. Recuerda que un shapefile completo incluye varios archivos: .shp, .shx, .dbf, y .prj. Necesitas copiar todos estos archivos.
+### Paso 4 · Colocar tu shapefile
+
+Copia los cuatro archivos de tu shapefile dentro de `shapefiles/`. Si falta alguno, el
+programa lo detecta y avisa.
+
+### Paso 5 · Comprobar que todo quedó bien
+
+```bash
+python verificar_sistema.py
+```
+
+Debe mostrar `[OK]` en cada dependencia.
 
 ---
 
-## Cómo usar el programa
+## Cómo usarlo
 
-### La forma más sencilla (recomendado)
+### La forma sencilla
 
-Cada vez que quieras usar el programa, abre PowerShell en la carpeta del proyecto y ejecuta:
-
-```powershell
-# Primero activa el ambiente virtual
-.\venv\Scripts\Activate.ps1
-
-# Luego ejecuta el programa principal
+```bash
 python inicio.py
 ```
 
-El programa te hará cuatro preguntas:
+Este script te guía por los tres pasos del proceso (descarga, extracción y visualización),
+pidiendo confirmación antes de cada uno.
 
-1. **¿Qué índices quieres descargar?** - Escribe los números separados por comas. Ejemplo: `1,5` para NDVI y NDMI
-2. **¿Qué periodos?** - Meses en formato `YYYYMM`. Acepta:
-   - un rango: `202201-202608` (todos los meses entre ambos)
-   - una lista: `202609,202601` (solo esos meses)
-   - una mezcla: `202201-202203,202609`
-3. **¿Qué modo?**
-   - `1` **Solo faltantes** (por defecto): omite los periodos e imágenes que ya están descargados.
-   - `2` **Reemplazar**: borra y vuelve a descargar los periodos indicados. Úsalo si algún periodo se dañó.
-4. **¿Qué área?** - El número del shapefile a usar.
+Durante la descarga te hará cuatro preguntas:
 
-Después de responder, el programa hará todo automáticamente:
+**1. Qué índices quieres** — números separados por comas:
 
-- Busca y descarga todas las imágenes Sentinel-2 disponibles en esos periodos
-- Extrae los valores de cada píxel de las imágenes
-- Crea mapas visuales con colores para cada índice
-- Guarda todo en carpetas organizadas
+```
+Ingresa los números separados por comas (ej: 1,2,5): 1,5
+```
 
-El proceso puede tardar varios minutos dependiendo de cuántas imágenes encuentre.
+**2. Qué periodos descargar** — en formato `AAAAMM`. Acepta tres notaciones:
 
-### Descargar la base una sola vez
+| Notación | Ejemplo | Significado |
+|----------|---------|-------------|
+| Rango | `202201-202608` | Todos los meses entre ambos |
+| Lista | `202609,202601` | Sólo esos meses |
+| Mezcla | `202201-202203,202609` | Combinación de las anteriores |
 
-La primera vez descarga todo el rango que necesites, por ejemplo `202201-202608`. El programa
-guarda un registro en `descargas/<area>/manifest.json` con los periodos completados por índice.
-En corridas posteriores basta con pedir el periodo nuevo (por ejemplo `202609`): lo que ya está
-completo se omite sin volver a consultar Google Earth Engine.
+**3. Modo de descarga:**
 
-Si necesitas volver a bajar periodos concretos (datos dañados), pídelos en modo **Reemplazar**:
-`202609,202601`. El programa borra esas carpetas, las descarga de nuevo y deja las fechas
-marcadas en el manifiesto para que `Tesis_ANALISIS/scripts/actualizar_datos.py` las recalcule.
+| Modo | Comportamiento | Cuándo usarlo |
+|------|----------------|---------------|
+| **1 · Solo faltantes** *(por defecto)* | Omite lo ya descargado, según el manifiesto | Uso normal |
+| **2 · Reemplazar** | Borra y vuelve a descargar los periodos indicados | Si sospechas que una descarga quedó corrupta |
 
-Si borras el manifiesto, se reconstruye automáticamente a partir de las carpetas ya descargadas.
+**4. Qué área usar** — elige uno de los shapefiles disponibles en `shapefiles/`.
+
+> Gracias al manifiesto, puedes pedir un rango amplio sin miedo: el programa descarga
+> únicamente los periodos que aún no tiene.
+
+### Ejecutar un paso por separado
+
+```bash
+python descargar_simple.py     # Sólo descargar imágenes
+python extraer_pixeles.py      # Sólo extraer valores de píxeles
+python visualizar_indices.py   # Sólo generar mapas
+```
 
 ---
 
-## Dónde encontrar tus resultados
-
-Todos los archivos se guardan en la carpeta `descargas/`. Dentro encontrarás una carpeta para cada índice (NDVI, NDRE, etc.), y dentro de cada una habrá una carpeta por cada imagen descargada.
-
-Estructura de carpetas:
+## Dónde quedan tus resultados
 
 ```
 descargas/
-├── manifest.json                            (Registro de periodos descargados)
-├── NDVI/
-│   ├── area_20250204_14QMG/                 (fecha + tile Sentinel-2)
-│   │   ├── area_20250204_NDVI.tiff          (Imagen satelital original)
-│   │   ├── valores_pixeles/
-│   │   │   ├── pixeles_NDVI.csv             (Tabla que puedes abrir en Excel)
-│   │   │   └── pixeles_NDVI.shp             (Para usar en Google Earth o QGIS)
-│   │   └── visualizacion/
-│   │       └── NDVI_clasificado.png         (Mapa con colores)
-│   └── (más carpetas con otras fechas)
+└── NOMBRE_DE_TU_AREA/
+    ├── manifest.json                    Registro de lo descargado
+    └── NDVI/
+        └── area_20250204_115050/
+            ├── area_20250204_NDVI.tiff  Imagen satelital
+            ├── valores_pixeles/
+            │   ├── pixeles_NDVI.csv     Tabla para Excel
+            │   └── pixeles_NDVI.shp     Capa para QGIS
+            └── visualizacion/
+                └── NDVI_clasificado.png Mapa de colores
 ```
 
-Tipos de archivos que encontrarás:
-
-- **Archivos .tiff** - Las imágenes satelitales originales
-- **Archivos .csv** - Tablas con los datos que puedes abrir en Excel
-- **Archivos .shp** - Shapefiles para visualizar en programas GIS como Google Earth o QGIS
-- **Archivos .png** - Mapas visuales con colores
-
----
-
-## Interpretación de los colores
-
-Cuando abras las imágenes PNG, verás mapas con diferentes colores. Aquí está lo que significan:
-
-### Para NDVI (salud de la vegetación)
-
-- **Café/marrón**: No hay vegetación o está muy seca
-- **Amarillo**: Vegetación débil o estresada
-- **Verde claro**: Vegetación moderadamente saludable
-- **Verde**: Vegetación saludable
-- **Verde oscuro**: Vegetación muy densa y saludable
-
-### Para NDMI (contenido de agua)
-
-- **Café/marrón**: Vegetación muy seca, con estrés hídrico
-- **Beige**: Poca humedad
-- **Azul claro**: Humedad moderada
-- **Azul**: Buena humedad
-- **Azul oscuro**: Alta humedad
+| Extensión | Qué es | Con qué se abre |
+|-----------|--------|-----------------|
+| `.tiff` | Imagen satelital original | QGIS, ArcGIS |
+| `.csv` | Tabla de valores por píxel | Excel, Python |
+| `.shp` | Capa geográfica | QGIS, Google Earth |
+| `.png` | Mapa de colores | Cualquier visor |
 
 ---
 
-## Solución de problemas comunes
+## Cómo leer los mapas
 
-### Error: "No se encontró archivo JSON"
+### NDVI — salud de la vegetación
 
-Esto significa que el programa no encuentra tus credenciales de Google Earth Engine. Verifica que colocaste el archivo JSON en la carpeta principal del proyecto y que su nombre empiece con `tesis-`.
+| Color | Significado |
+|-------|-------------|
+| Café / marrón | Sin vegetación o muy seca |
+| Amarillo | Vegetación débil o estresada |
+| Verde claro | Moderadamente saludable |
+| Verde | Saludable |
+| Verde oscuro | Muy densa y saludable |
 
-### Error: "No se encontró shapefile"
+### NDMI — contenido de agua
 
-El programa no encuentra tu shapefile. Asegúrate de que copiaste todos los archivos del shapefile (.shp, .shx, .dbf, .prj) en la carpeta `shapefiles/`.
-
-### Error: "No hay imágenes disponibles"
-
-No hay imágenes Sentinel-2 disponibles para tu área y rango de fechas. Puedes intentar:
-- Ampliar el rango de fechas (usar más meses)
-- Verificar que tu shapefile cubre el área correcta
+| Color | Significado |
+|-------|-------------|
+| Café / marrón | Estrés hídrico severo |
+| Beige | Poca humedad |
+| Azul claro | Humedad moderada |
+| Azul | Buena humedad |
+| Azul oscuro | Alta humedad |
 
 ---
 
-## Ejemplo completo de uso
+## Si algo sale mal
 
-Aquí te muestro un ejemplo paso a paso de cómo usar el programa:
+| Mensaje | Qué significa | Solución |
+|---------|---------------|----------|
+| `No se encontró archivo JSON` | Faltan las credenciales | Copia el JSON a la carpeta principal; su nombre debe empezar con `tesis-` |
+| `No se encontró shapefile` | Falta el área de estudio | Copia los **cuatro** archivos (`.shp`, `.shx`, `.dbf`, `.prj`) a `shapefiles/` |
+| `No hay imágenes disponibles` | Sin datos en ese rango | Amplía el rango de fechas o revisa que el shapefile cubra el área correcta |
+| `ModuleNotFoundError` | Ambiente sin activar | Actívalo y reinstala: `pip install -r requirements.txt` |
+| `command not found: python` | Alias distinto | Usa `python3` (macOS/Linux) o `py` (Windows) |
 
-```powershell
-# 1. Activar el ambiente virtual
-.\venv\Scripts\Activate.ps1
+### Problemas al instalar GDAL o rasterio
 
-# 2. Ejecutar el programa
-python inicio.py
+En macOS, instala primero la librería del sistema:
 
-# 3. El programa pregunta: ¿Qué índices quieres?
-# Tú escribes: 1
-# (Esto descarga solo NDVI)
-
-# 4. El programa pregunta: ¿Periodos?
-# Tú escribes: 202501-202503
-
-# 5. El programa pregunta: ¿Modo?
-# Tú escribes: 1   (solo faltantes)
-
-# 6. Eliges el área y confirmas con: s
-
-# 7. Esperas mientras el programa trabaja
-# (Puede tardar varios minutos)
-
-# 8. Cuando termine, revisa la carpeta descargas/NDVI/
+```bash
+brew install gdal
+pip install -r requirements.txt
 ```
 
 ---
 
 ## Resumen rápido
 
-Si ya conoces el programa, estos son los pasos básicos:
-
-1. Abre PowerShell en la carpeta del proyecto
-2. Activa el ambiente: `.\venv\Scripts\Activate.ps1`
-3. Ejecuta: `python inicio.py`
-4. Responde las preguntas
-5. Espera a que termine
-6. Revisa la carpeta `descargas/`
+```bash
+source venv/bin/activate     # Windows: .\venv\Scripts\Activate.ps1
+python inicio.py
+# Revisa la carpeta descargas/
+```
 
 ---
 
-**Última actualización:** 24 de noviembre de 2025  
-**Sistema probado exitosamente con 18 imágenes descargadas**
+## Y después, ¿qué sigue?
+
+Una vez descargados los datos, el proyecto **Tesis_ANALISIS** los procesa para generar
+estadísticas, predicciones y reportes en PDF. Consulta su `README.md`.

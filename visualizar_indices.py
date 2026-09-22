@@ -55,7 +55,7 @@ def seleccionar_area():
     areas = obtener_areas_disponibles()
     
     if not areas:
-        print("⚠️ No se encontraron áreas con datos")
+        print("[AVISO] No se encontraron áreas con datos")
         return None
     
     if len(areas) == 1:
@@ -139,14 +139,14 @@ def encontrar_archivo_mas_reciente(indice, area):
     ruta_descargas = Path('./descargas') / area / indice
     
     if not ruta_descargas.exists():
-        print(f"⚠️ No se encontraron shapefiles en: {ruta_descargas}")
+        print(f"[AVISO] No se encontraron shapefiles en: {ruta_descargas}")
         return None
     
     # Buscar todos los shapefiles de píxeles extraídos
     shapefiles = list(ruta_descargas.rglob(f'pixeles_{indice}_*.shp'))
     
     if not shapefiles:
-        print(f"⚠️ No se encontraron shapefiles en: {ruta_descargas}")
+        print(f"[AVISO] No se encontraron shapefiles en: {ruta_descargas}")
         return None
     
     # Obtener el más reciente por fecha de modificación
@@ -171,25 +171,25 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
     # Buscar shapefile si no se proporciona
     if shapefile_path is None:
         if area is None:
-            print("❌ Error: Debe especificar área o shapefile_path")
+            print("[ERROR] Error: Debe especificar área o shapefile_path")
             return False
         shapefile_path = encontrar_archivo_mas_reciente(indice, area)
         if shapefile_path is None:
             return False
     
-    print(f"📂 Archivo: {shapefile_path}")
+    print(f"Archivo: {shapefile_path}")
     
     # Cargar datos
     try:
         gdf = gpd.read_file(shapefile_path)
-        print(f"✅ Datos cargados: {len(gdf)} píxeles")
+        print(f"[OK] Datos cargados: {len(gdf)} píxeles")
     except Exception as e:
-        print(f"❌ Error al cargar shapefile: {e}")
+        print(f"[ERROR] Error al cargar shapefile: {e}")
         return False
     
     # Verificar que el índice existe en los datos
     if indice not in gdf.columns:
-        print(f"❌ El índice '{indice}' no se encuentra en los datos")
+        print(f"[ERROR] El índice '{indice}' no se encuentra en los datos")
         print(f"   Columnas disponibles: {gdf.columns.tolist()}")
         return False
     
@@ -208,18 +208,18 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
                     gdf_validos = gdf_validos.to_crs(shapefile_area.crs)
                 # Filtrar solo puntos dentro del polígono
                 gdf_validos = gpd.sjoin(gdf_validos, shapefile_area, predicate='within', how='inner')
-                print(f"📍 Píxeles dentro del polígono: {len(gdf_validos)}")
+                print(f"Píxeles dentro del polígono: {len(gdf_validos)}")
     except Exception as e:
-        print(f"⚠️ Advertencia: No se pudo filtrar por polígono: {e}")
+        print(f"[AVISO] Advertencia: No se pudo filtrar por polígono: {e}")
     
-    print(f"📊 Píxeles válidos: {len(gdf_validos)}")
+    print(f"Píxeles válidos: {len(gdf_validos)}")
     
     if len(gdf_validos) == 0:
-        print(f"⚠️ No hay datos válidos para {indice}")
+        print(f"[AVISO] No hay datos válidos para {indice}")
         return False
     
     # Estadísticas
-    print(f"\n📈 Estadísticas de {indice}:")
+    print(f"\nEstadísticas de {indice}:")
     print(f"   Mínimo:  {gdf_validos[indice].min():.4f}")
     print(f"   Máximo:  {gdf_validos[indice].max():.4f}")
     print(f"   Media:   {gdf_validos[indice].mean():.4f}")
@@ -319,7 +319,7 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
         output_file = output_dir / f'mapa_{indice}_{timestamp}.png'
 
         plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white')
-        print(f"\n💾 Imagen guardada: {output_file}")
+        print(f"\nImagen guardada: {output_file}")
 
     plt.show()
     plt.close(fig)
@@ -351,7 +351,7 @@ def visualizar_todos_indices(area):
     print("="*60)
     
     for indice, exito in resultados:
-        estado = "✅ Exitoso" if exito else "❌ Fallido"
+        estado = "[OK] Exitoso" if exito else "[ERROR] Fallido"
         print(f"{indice:10s} : {estado}")
     
     exitosos = sum(1 for _, e in resultados if e)
@@ -441,7 +441,7 @@ def generar_informe_estadistico(indice, area):
         f.write(f"Mediana:                {gdf_validos[indice].median():.4f}\n")
         f.write(f"Desviación estándar:    {gdf_validos[indice].std():.4f}\n")
     
-    print(f"\n📄 Informe guardado: {output_file}")
+    print(f"\nInforme guardado: {output_file}")
 
 
 def menu_principal(area):
@@ -469,7 +469,7 @@ def menu_principal(area):
             opcion = input("\nSelecciona una opción (0-7): ").strip()
             
             if opcion == '0':
-                print("\n👋 ¡Hasta luego!")
+                print("\n¡Hasta luego!")
                 break
             elif opcion == '1':
                 visualizar_indice('NDVI', area=area)
@@ -491,33 +491,33 @@ def menu_principal(area):
                 if idx in indices_map:
                     generar_informe_estadistico(indices_map[idx], area)
                 else:
-                    print("❌ Opción inválida")
+                    print("[ERROR] Opción inválida")
             else:
-                print("❌ Opción inválida. Intenta de nuevo.")
+                print("[ERROR] Opción inválida. Intenta de nuevo.")
         except KeyboardInterrupt:
-            print("\n\n👋 Interrumpido por el usuario. ¡Hasta luego!")
+            print("\n\nInterrumpido por el usuario. ¡Hasta luego!")
             break
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[ERROR] Error: {e}")
 
 
 if __name__ == "__main__":
-    print("\n🎨 Sistema de Visualización de Índices de Vegetación")
+    print("\nSistema de Visualización de Índices de Vegetación")
     print("   Paletas de colores específicas para cada índice")
     print("   Sentinel-2 | NDVI, NDRE, MSAVI, RECI, NDMI\n")
     
     # Verificar que estamos en el directorio correcto
     if not Path('./descargas').exists():
-        print("⚠️ Advertencia: No se encontró la carpeta 'descargas'")
+        print("[AVISO] Advertencia: No se encontró la carpeta 'descargas'")
         print("   Asegúrate de ejecutar este script desde el directorio raíz del proyecto")
         sys.exit(1)
     
     # Seleccionar área
     area_seleccionada = seleccionar_area()
     if not area_seleccionada:
-        print("❌ No hay áreas disponibles para visualizar")
+        print("[ERROR] No hay áreas disponibles para visualizar")
         sys.exit(1)
     
-    print(f"\n📍 Trabajando con área: {area_seleccionada}\n")
+    print(f"\nTrabajando con área: {area_seleccionada}\n")
     
     menu_principal(area_seleccionada)

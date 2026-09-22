@@ -62,9 +62,9 @@ while not indices_seleccionados:
             indices_seleccionados.append(indices_map[num])
     
     if not indices_seleccionados:
-        print(f"{C.R}✗ No se seleccionó ningún índice válido. Intenta de nuevo.{C.E}\n")
+        print(f"{C.R}[ERROR] No se seleccionó ningún índice válido. Intenta de nuevo.{C.E}\n")
 
-print(f"{C.G}✓ Índices seleccionados: {', '.join(indices_seleccionados)}{C.E}\n")
+print(f"{C.G}[OK] Índices seleccionados: {', '.join(indices_seleccionados)}{C.E}\n")
 
 # 2. SELECCIÓN DE PERIODOS (YYYYMM)
 periodos = []
@@ -78,9 +78,9 @@ while not periodos:
     try:
         periodos = expandir_periodos(entrada)
     except ValueError as e:
-        print(f"{C.R}✗ {e}. Intenta de nuevo.{C.E}\n")
+        print(f"{C.R}[ERROR] {e}. Intenta de nuevo.{C.E}\n")
 
-print(f"{C.G}✓ {len(periodos)} periodo(s): {periodos[0]} → {periodos[-1]}{C.E}")
+print(f"{C.G}[OK] {len(periodos)} periodo(s): {periodos[0]} → {periodos[-1]}{C.E}")
 if len(periodos) <= 12:
     print(f"  {', '.join(periodos)}")
 print()
@@ -94,9 +94,9 @@ modo = None
 while modo not in ['1', '2', '']:
     modo = input(f"{C.G}Selecciona el modo [1]: {C.E}").strip()
     if modo not in ['1', '2', '']:
-        print(f"{C.R}✗ Opción inválida.{C.E}")
+        print(f"{C.R}[ERROR] Opción inválida.{C.E}")
 reemplazar = (modo == '2')
-print(f"{C.G}✓ Modo: {'REEMPLAZAR' if reemplazar else 'solo faltantes'}{C.E}\n")
+print(f"{C.G}[OK] Modo: {'REEMPLAZAR' if reemplazar else 'solo faltantes'}{C.E}\n")
 
 # 3. SELECCIÓN DE SHAPEFILE
 # Buscar todos los shapefiles
@@ -113,10 +113,10 @@ for shp in todos_los_shp:
     if shx_file.exists() and dbf_file.exists():
         shapefiles.append(shp)
     else:
-        print(f"{C.Y}⚠️ Shapefile incompleto omitido: {shp.name} (falta .shx o .dbf){C.E}")
+        print(f"{C.Y}[AVISO] Shapefile incompleto omitido: {shp.name} (falta .shx o .dbf){C.E}")
 
 if not shapefiles:
-    print(f"{C.R}✗ No se encontró ningún shapefile válido en shapefiles/{C.E}")
+    print(f"{C.R}[ERROR] No se encontró ningún shapefile válido en shapefiles/{C.E}")
     print(f"{C.Y}Asegúrate de que tu shapefile tenga todos los archivos: .shp, .shx, .dbf, .prj{C.E}")
     exit(1)
 
@@ -141,7 +141,7 @@ while shapefile_seleccionado is None:
     try:
         idx_shp = int(seleccion_shp) - 1
         if idx_shp < 0 or idx_shp >= len(shapefiles):
-            print(f"{C.R}✗ Número inválido. Debe estar entre 1 y {len(shapefiles)}. Intenta de nuevo.{C.E}\n")
+            print(f"{C.R}[ERROR] Número inválido. Debe estar entre 1 y {len(shapefiles)}. Intenta de nuevo.{C.E}\n")
             continue
         
         shapefile_seleccionado = shapefiles[idx_shp]
@@ -152,10 +152,10 @@ while shapefile_seleccionado is None:
             nombre_confirmacion = shapefile_seleccionado.parent.name
         else:
             nombre_confirmacion = shapefile_seleccionado.stem
-        print(f"{C.G}✓ Área seleccionada: {nombre_confirmacion}{C.E}\n")
+        print(f"{C.G}[OK] Área seleccionada: {nombre_confirmacion}{C.E}\n")
         
     except ValueError:
-        print(f"{C.R}✗ Debes ingresar un número válido. Intenta de nuevo.{C.E}\n")
+        print(f"{C.R}[ERROR] Debes ingresar un número válido. Intenta de nuevo.{C.E}\n")
 
 # 4. CONFIRMACIÓN
 print(f"{C.B}{'='*60}")
@@ -190,14 +190,14 @@ if not reemplazar:
     print(f"  Por descargar:            {pendientes}")
     print()
     if pendientes == 0:
-        print(f"{C.G}✓ Todo lo solicitado ya está descargado. Nada que hacer.{C.E}")
+        print(f"{C.G}[OK] Todo lo solicitado ya está descargado. Nada que hacer.{C.E}")
         print(f"{C.Y}  Usa el modo 'Reemplazar' si necesitas volver a bajar algún periodo.{C.E}\n")
         exit(0)
 
 confirmar = input(f"{C.Y}¿Continuar con la descarga? (s/n): {C.E}").strip().lower()
 
 if confirmar != 's':
-    print(f"{C.R}✗ Descarga cancelada{C.E}")
+    print(f"{C.Y}[CANCELADO] Descarga cancelada por el usuario{C.E}")
     exit(0)
 
 # 5. EJECUCIÓN DE DESCARGAS
@@ -248,7 +248,7 @@ try:
             )
 
             if not resultado['exito']:
-                print(f"{C.R}✗ {etiqueta}: {resultado.get('error', 'Desconocido')}{C.E}")
+                print(f"{C.R}[ERROR] {etiqueta}: {resultado.get('error', 'Desconocido')}{C.E}")
                 resumen['fallidas'] += 1
                 continue
 
@@ -258,10 +258,10 @@ try:
             fechas = resultado.get('fechas', [])
 
             if resultado.get('sin_imagenes'):
-                print(f"{C.Y}  ⚠ Sin imágenes disponibles (nubes > 30% o sin pasadas){C.E}")
+                print(f"{C.Y}  [AVISO] Sin imágenes disponibles (nubes > 30% o sin pasadas){C.E}")
                 resumen['periodos_sin_imagenes'] += 1
             else:
-                print(f"{C.G}  ✓ {exitosos} descargadas, {omitidos} ya existían, {fallidos} fallidas{C.E}")
+                print(f"{C.G}  [OK] {exitosos} descargadas, {omitidos} ya existían, {fallidos} fallidas{C.E}")
 
             resumen['descargadas'] += exitosos
             resumen['omitidas'] += omitidos
@@ -288,7 +288,7 @@ try:
     print(f"{C.G}Para extraer píxeles, ejecuta: python extraer_pixeles.py{C.E}\n")
 
 except Exception as e:
-    print(f"\n{C.R}✗ ERROR CRÍTICO: {e}{C.E}")
+    print(f"\n{C.R}[ERROR] ERROR CRÍTICO: {e}{C.E}")
     print(f"{C.Y}Verifica:{C.E}")
     print(f"  1. Archivo JSON de service account (tesis-*.json) en la carpeta raíz")
     print(f"  2. Shapefile en carpeta shapefiles/")
