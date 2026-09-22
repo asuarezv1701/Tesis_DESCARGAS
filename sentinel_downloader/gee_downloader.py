@@ -7,7 +7,7 @@ import ee
 import os
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 import geopandas as gpd
 from shapely.geometry import mapping
@@ -15,6 +15,7 @@ import requests
 import numpy as np
 import rasterio
 from rasterio.transform import from_bounds
+from .manifiesto import existe_imagen
 
 
 class GEEDownloader:
@@ -201,7 +202,8 @@ class GEEDownloader:
                         geometria: ee.Geometry,
                         indice: str,
                         fecha: str,
-                        nombre_area: str = "area") -> Dict:
+                        nombre_area: str = "area",
+                        tile: Optional[str] = None) -> Dict:
         """
         Descarga una imagen con el índice calculado
         
@@ -209,17 +211,21 @@ class GEEDownloader:
             imagen: Imagen de Earth Engine
             geometria: Área de interés
             indice: Índice a calcular
-            fecha: Fecha de la imagen
+            fecha: Fecha de la imagen (YYYYMMDD)
             nombre_area: Nombre del área
+            tile: Identificador del tile Sentinel-2 (MGRS). Se usa como sufijo
+                  determinista de la carpeta para que la misma imagen caiga
+                  siempre en el mismo lugar y no se duplique.
             
         Returns:
             Diccionario con información de la descarga
         """
-        # Crear carpeta de salida con nueva estructura: descargas/area/indice/
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Carpeta de salida: descargas/area/indice/area_YYYYMMDD_<tile>
+        # (si no hay tile se usa un timestamp, comportamiento antiguo)
+        sufijo = tile if tile else datetime.now().strftime("%Y%m%d_%H%M%S")
         carpeta_area = self.output_dir / nombre_area
         carpeta_indice = carpeta_area / indice
-        carpeta_descarga = carpeta_indice / f"{nombre_area}_{fecha}_{timestamp}"
+        carpeta_descarga = carpeta_indice / f"{nombre_area}_{fecha}_{sufijo}"
         carpeta_descarga.mkdir(parents=True, exist_ok=True)
         
         # Calcular índice
@@ -278,7 +284,8 @@ class GEEDownloader:
                         fecha_inicio: str,
                         fecha_fin: str,
                         nombre_area: str = "area",
-                        max_cloud: float = 30) -> Dict:
+                        max_cloud: float = 30,
+                        omitir_existentes: bool = True) -> Dict:
         """
         Descarga todas las imágenes de un índice en un rango de fechas
         
@@ -286,12 +293,15 @@ class GEEDownloader:
             shapefile_path: Ruta al shapefile del área
             indice: Índice a descargar
             fecha_inicio: Fecha inicio (YYYY-MM-DD)
-            fecha_fin: Fecha fin (YYYY-MM-DD)
+            fecha_fin: Fecha fin (YYYY-MM-DD, exclusiva)
             nombre_area: Nombre del área
             max_cloud: Máximo % de nubes
+            omitir_existentes: Si True, no vuelve a bajar imágenes cuyo TIFF
+                               ya existe en disco (misma fecha y tile).
             
         Returns:
-            Diccionario con resultados
+            Diccionario con resultados. Incluye 'fechas' (YYYYMMDD de todas
+            las imágenes del rango) y 'omitidos' (ya existentes en disco).
         """
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"Descargando {indice}: {fecha_inicio} a {fecha_fin}")
@@ -311,22 +321,44 @@ class GEEDownloader:
             if num_imagenes == 0:
                 self.logger.warning(f"No se encontraron imágenes para {indice}")
                 return {
-                    'exito': False,
-                    'error': 'No hay imágenes disponibles',
-                    'num_imagenes': 0
+                    'exito': True,
+                    'sin_imagenes': True,
+                    'indice': indice,
+                    'num_imagenes': 0,
+                    'exitosos': 0,
+                    'fallidos': 0,
+                    'omitidos': 0,
+                    'fechas': [],
+                    'resultados': []
                 }
+            
+            carpeta_indice = self.output_dir / nombre_area / indice
             
             # Descargar cada imagen
             resultados = []
+            fechas = []
+            omitidos = 0
             for i, img_info in enumerate(imagenes_info['features'], 1):
                 img_id = img_info['id']
-                fecha_img = img_info['properties']['system:time_start']
-                fecha_str = datetime.fromtimestamp(fecha_img / 1000).strftime('%Y%m%d')
+                props = img_info['properties']
+                # Fecha en UTC para que el nombre no dependa de la zona horaria local
+                fecha_str = datetime.fromtimestamp(
+                    props['system:time_start'] / 1000, tz=timezone.utc
+                ).strftime('%Y%m%d')
+                tile = props.get('MGRS_TILE') or img_id.split('_')[-1]
+                fechas.append(fecha_str)
                 
-                self.logger.info(f"[{i}/{num_imagenes}] Procesando imagen {fecha_str}")
+                if omitir_existentes and existe_imagen(carpeta_indice, fecha_str, tile):
+                    self.logger.info(f"[{i}/{num_imagenes}] {fecha_str} ({tile}) ya existe, omitida")
+                    omitidos += 1
+                    continue
+                
+                self.logger.info(f"[{i}/{num_imagenes}] Procesando imagen {fecha_str} ({tile})")
                 
                 imagen = ee.Image(img_id)
-                resultado = self.descargar_imagen(imagen, geometria, indice, fecha_str, nombre_area)
+                resultado = self.descargar_imagen(
+                    imagen, geometria, indice, fecha_str, nombre_area, tile=tile
+                )
                 resultados.append(resultado)
             
             # Resumen
@@ -337,7 +369,9 @@ class GEEDownloader:
                 'indice': indice,
                 'num_imagenes': num_imagenes,
                 'exitosos': exitosos,
-                'fallidos': num_imagenes - exitosos,
+                'fallidos': len(resultados) - exitosos,
+                'omitidos': omitidos,
+                'fechas': fechas,
                 'resultados': resultados
             }
             

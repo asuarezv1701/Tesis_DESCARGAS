@@ -35,22 +35,9 @@ pip install -r requirements.txt
 
 ### Paso 3: Configurar credenciales
 
-Coloca tu archivo JSON de credenciales de Google Earth Engine en la carpeta principal del proyecto. El archivo debe tener un nombre que empiece con `tesis-` (por ejemplo: `tesis-123456-abc.json`).
+Coloca tu archivo JSON de credenciales de Google Earth Engine (cuenta de servicio) en la carpeta principal del proyecto. El archivo debe tener un nombre que empiece con `tesis-` (por ejemplo: `tesis-123456-abc.json`).
 
-O configura las variables de entorno:
-
-```bash
-export SENTINEL_CLIENT_ID='tu_client_id'
-export SENTINEL_CLIENT_SECRET='tu_client_secret'
-```
-
-Para hacerlo permanente, agrégalas a tu `~/.zshrc` o `~/.bash_profile`:
-
-```bash
-echo 'export SENTINEL_CLIENT_ID="tu_client_id"' >> ~/.zshrc
-echo 'export SENTINEL_CLIENT_SECRET="tu_client_secret"' >> ~/.zshrc
-source ~/.zshrc
-```
+> **Importante:** este archivo es una credencial privada. No lo subas a repositorios ni lo incluyas en la entrega final; ya está listado en `.gitignore`.
 
 ### Paso 4: Agregar shapefile
 
@@ -71,8 +58,8 @@ python inicio.py
 ### Comandos disponibles
 
 ```bash
-python inicio.py              # Proceso completo interactivo
-python main.py                # Descarga con menú interactivo
+python inicio.py              # Proceso completo interactivo (descarga → extracción → visualización)
+python descargar_simple.py    # Solo descarga de imágenes
 python extraer_pixeles.py     # Extraer píxeles de imágenes
 python visualizar_indices.py  # Visualizar índices
 python verificar_sistema.py   # Verificar configuración
@@ -86,15 +73,12 @@ python verificar_sistema.py   # Verificar configuración
 # Activar el ambiente
 source venv/bin/activate
 
-# Verificar el sistema completo
-python verificar_sistema_completo.py
+# Verificar dependencias del sistema
+python verificar_sistema.py
 ```
 
-Este script verificará:
-- ✓ Versión de Python
-- ✓ Dependencias instaladas
-- ✓ Credenciales configuradas
-- ✓ Shapefiles disponibles
+Este script verificará que estén instaladas las dependencias críticas
+(rasterio, fiona, geopandas, earthengine-api, geemap, numpy, pandas).
 
 ---
 

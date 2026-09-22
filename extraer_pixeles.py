@@ -4,6 +4,7 @@ Extrae valores de todas las descargas disponibles
 """
 
 import os
+import numpy as np
 import rasterio
 import pandas as pd
 import geopandas as gpd
@@ -81,11 +82,15 @@ if confirmar != 's':
     print(f"{C.R}✗ Extracción cancelada{C.E}")
     exit(0)
 
+forzar = input(f"{C.Y}¿Re-extraer también las carpetas que ya tienen valores_pixeles? (s/N): {C.E}").strip().lower() == 's'
+if not forzar:
+    print(f"{C.G}✓ Solo se procesarán carpetas nuevas (sin valores_pixeles){C.E}")
+
 print(f"\n{C.B}Iniciando extracción...{C.E}\n")
 
 try:
-    import numpy as np
     total_extraidos = 0
+    total_omitidas = 0
     
     for area, indices in areas_disponibles:
         print(f"{C.B}Procesando área: {area}{C.E}")
@@ -100,6 +105,10 @@ try:
                     tiff_files = list(descarga_dir.glob("*.tiff")) + list(descarga_dir.glob("*.tif"))
                     if tiff_files:
                         tiff_file = tiff_files[0]
+                        carpeta_valores = descarga_dir / "valores_pixeles"
+                        if not forzar and any(carpeta_valores.glob("*.csv")):
+                            total_omitidas += 1
+                            continue
                         print(f"    Extrayendo: {descarga_dir.name}")
                         
                         try:
@@ -134,6 +143,7 @@ try:
     print(f"EXTRACCIÓN COMPLETADA")
     print(f"{'='*60}{C.E}")
     print(f"{C.G}Total píxeles extraídos: {total_extraidos}{C.E}")
+    print(f"{C.Y}Carpetas omitidas (ya extraídas): {total_omitidas}{C.E}")
     print(f"{C.Y}Los archivos CSV y Shapefile están en cada carpeta de descarga{C.E}\n")
     
 except Exception as e:

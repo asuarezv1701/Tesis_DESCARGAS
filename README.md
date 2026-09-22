@@ -80,20 +80,39 @@ Cada vez que quieras usar el programa, abre PowerShell en la carpeta del proyect
 python inicio.py
 ```
 
-El programa te hará tres preguntas:
+El programa te hará cuatro preguntas:
 
 1. **¿Qué índices quieres descargar?** - Escribe los números separados por comas. Ejemplo: `1,5` para NDVI y NDMI
-2. **¿Desde qué fecha?** - Escribe la fecha de inicio en formato YYYY-MM-DD. Ejemplo: `2025-02-01`
-3. **¿Hasta qué fecha?** - Escribe la fecha final. Ejemplo: `2025-04-28`
+2. **¿Qué periodos?** - Meses en formato `YYYYMM`. Acepta:
+   - un rango: `202201-202608` (todos los meses entre ambos)
+   - una lista: `202609,202601` (solo esos meses)
+   - una mezcla: `202201-202203,202609`
+3. **¿Qué modo?**
+   - `1` **Solo faltantes** (por defecto): omite los periodos e imágenes que ya están descargados.
+   - `2` **Reemplazar**: borra y vuelve a descargar los periodos indicados. Úsalo si algún periodo se dañó.
+4. **¿Qué área?** - El número del shapefile a usar.
 
 Después de responder, el programa hará todo automáticamente:
 
-- Busca y descarga todas las imágenes Sentinel-2 disponibles en ese rango de fechas
+- Busca y descarga todas las imágenes Sentinel-2 disponibles en esos periodos
 - Extrae los valores de cada píxel de las imágenes
 - Crea mapas visuales con colores para cada índice
 - Guarda todo en carpetas organizadas
 
 El proceso puede tardar varios minutos dependiendo de cuántas imágenes encuentre.
+
+### Descargar la base una sola vez
+
+La primera vez descarga todo el rango que necesites, por ejemplo `202201-202608`. El programa
+guarda un registro en `descargas/<area>/manifest.json` con los periodos completados por índice.
+En corridas posteriores basta con pedir el periodo nuevo (por ejemplo `202609`): lo que ya está
+completo se omite sin volver a consultar Google Earth Engine.
+
+Si necesitas volver a bajar periodos concretos (datos dañados), pídelos en modo **Reemplazar**:
+`202609,202601`. El programa borra esas carpetas, las descarga de nuevo y deja las fechas
+marcadas en el manifiesto para que `Tesis_ANALISIS/scripts/actualizar_datos.py` las recalcule.
+
+Si borras el manifiesto, se reconstruye automáticamente a partir de las carpetas ya descargadas.
 
 ---
 
@@ -105,8 +124,9 @@ Estructura de carpetas:
 
 ```
 descargas/
+├── manifest.json                            (Registro de periodos descargados)
 ├── NDVI/
-│   ├── area_20250204_115050/
+│   ├── area_20250204_14QMG/                 (fecha + tile Sentinel-2)
 │   │   ├── area_20250204_NDVI.tiff          (Imagen satelital original)
 │   │   ├── valores_pixeles/
 │   │   │   ├── pixeles_NDVI.csv             (Tabla que puedes abrir en Excel)
@@ -180,13 +200,13 @@ python inicio.py
 # Tú escribes: 1
 # (Esto descarga solo NDVI)
 
-# 4. El programa pregunta: ¿Fecha de inicio?
-# Tú escribes: 2025-01-01
+# 4. El programa pregunta: ¿Periodos?
+# Tú escribes: 202501-202503
 
-# 5. El programa pregunta: ¿Fecha de fin?
-# Tú escribes: 2025-03-31
+# 5. El programa pregunta: ¿Modo?
+# Tú escribes: 1   (solo faltantes)
 
-# 6. Confirmas con: s
+# 6. Eliges el área y confirmas con: s
 
 # 7. Esperas mientras el programa trabaja
 # (Puede tardar varios minutos)

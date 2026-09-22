@@ -230,46 +230,45 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
     cmap = mcolors.ListedColormap(config['colors'])
     norm = mcolors.BoundaryNorm(config['bounds'], cmap.N)
     
-    # Crear figura con fondo oscuro para mejor contraste
-    plt.style.use('dark_background')
-    fig, ax = plt.subplots(figsize=(14, 12), facecolor='#2F2F2F')
-    ax.set_facecolor('#1C1C1C')  # Fondo del área de ploteo más oscuro
-    
+    # Crear figura con fondo claro (legible en impresión de tesis)
+    fig, ax = plt.subplots(figsize=(14, 12), facecolor='white')
+    ax.set_facecolor('#F5F5F5')  # Gris muy claro para el área de ploteo
+
     # Plotear datos con puntos más grandes
     gdf_validos.plot(
         column=indice,
         ax=ax,
         cmap=cmap,
         norm=norm,
-        edgecolor='white',      # Borde blanco para mejor definición
-        linewidth=0.1,         # Línea muy fina 
+        edgecolor='#666666',    # Borde gris para definición sobre fondo claro
+        linewidth=0.1,         # Línea muy fina
         legend=False,
         markersize=50,          # Puntos más grandes (era 20)
         alpha=0.95              # Más opacidad para mejor visibilidad
     )
-    
-    # Configurar título y etiquetas con colores para fondo oscuro
-    ax.set_title(config['titulo'], fontsize=18, fontweight='bold', pad=20, color='white')
-    ax.set_xlabel('Longitud', fontsize=12, color='white')
-    ax.set_ylabel('Latitud', fontsize=12, color='white')
-    
+
+    # Configurar título y etiquetas
+    ax.set_title(config['titulo'], fontsize=18, fontweight='bold', pad=20, color='#2C3E50')
+    ax.set_xlabel('Longitud', fontsize=12, color='#2C3E50')
+    ax.set_ylabel('Latitud', fontsize=12, color='#2C3E50')
+
     # Configurar colores de los ticks
-    ax.tick_params(colors='white')
-    
-    # Agregar descripción con mejor contraste
-    ax.text(0.5, -0.08, config['descripcion'], 
+    ax.tick_params(colors='#2C3E50')
+
+    # Agregar descripción
+    ax.text(0.5, -0.08, config['descripcion'],
             transform=ax.transAxes,
-            ha='center', fontsize=10, style='italic', color='white',
-            bbox=dict(boxstyle='round', facecolor='#404040', alpha=0.8, edgecolor='gray'))
-    
+            ha='center', fontsize=10, style='italic', color='#2C3E50',
+            bbox=dict(boxstyle='round', facecolor='#ECF0F1', alpha=0.9, edgecolor='#BDC3C7'))
+
     # Crear leyenda personalizada
     legend_elements = []
     for i, (color, label) in enumerate(zip(config['colors'], config['labels'])):
         legend_elements.append(
             Rectangle((0, 0), 1, 1, fc=color, edgecolor='black', linewidth=0.5, label=label)
         )
-    
-    # Agregar leyenda con estilo para fondo oscuro
+
+    # Agregar leyenda
     legend = ax.legend(
         handles=legend_elements,
         title=f'Rangos de {indice}',
@@ -280,26 +279,26 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
         frameon=True,
         fancybox=True,
         shadow=True,
-        facecolor='#404040',     # Fondo gris oscuro para la leyenda
-        edgecolor='gray',        # Borde gris
-        labelcolor='white'       # Texto blanco
+        facecolor='white',       # Fondo blanco para la leyenda
+        edgecolor='#BDC3C7',     # Borde gris claro
+        labelcolor='#2C3E50'     # Texto oscuro
     )
-    # Cambiar color del título de la leyenda
-    legend.get_title().set_color('white')
-    
-    # Agregar información adicional con colores para fondo oscuro
+    # Color del título de la leyenda
+    legend.get_title().set_color('#2C3E50')
+
+    # Agregar información adicional
     info_text = f"Píxeles: {len(gdf_validos)}\n"
     info_text += f"Rango: {gdf_validos[indice].min():.3f} - {gdf_validos[indice].max():.3f}\n"
     info_text += f"Media: {gdf_validos[indice].mean():.3f}"
-    
+
     ax.text(0.02, 0.98, info_text,
             transform=ax.transAxes,
             fontsize=9,
             verticalalignment='top',
-            color='white',
-            bbox=dict(boxstyle='round', facecolor='#404040', alpha=0.9, edgecolor='gray'))
-    
-    # Agregar fecha con color para fondo oscuro
+            color='#2C3E50',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='#BDC3C7'))
+
+    # Agregar fecha
     fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
     ax.text(0.98, 0.02, f'Generado: {fecha_actual}',
             transform=ax.transAxes,
@@ -307,26 +306,24 @@ def visualizar_indice(indice, shapefile_path=None, guardar=True, area=None):
             ha='right',
             va='bottom',
             style='italic',
-            color='lightgray')  # Color más claro para mejor visibilidad
-    
+            color='#7F8C8D')
+
     plt.tight_layout()
-    
+
     # Guardar imagen
     if guardar:
         output_dir = Path('./visualizaciones')
         output_dir.mkdir(exist_ok=True)
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = output_dir / f'mapa_{indice}_{timestamp}.png'
-        
-        plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='#2F2F2F')
+
+        plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white')
         print(f"\n💾 Imagen guardada: {output_file}")
-    
+
     plt.show()
-    
-    # Resetear estilo para no afectar otras visualizaciones
-    plt.style.use('default')
-    
+    plt.close(fig)
+
     return True
 
 

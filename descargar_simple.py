@@ -1,12 +1,22 @@
 """
 Script Simple de Descarga - Sentinel-2 con Google Earth Engine
-Pregunta índices y fechas, luego descarga múltiples imágenes
+Pregunta índices y periodos (YYYYMM), luego descarga las imágenes de cada periodo.
+
+- La base completa se descarga una sola vez (ej. 202201-202608).
+- Corridas posteriores solo bajan los periodos faltantes (manifest.json).
+- Se pueden re-descargar periodos concretos con el modo "reemplazar"
+  (ej. 202609,202601) si los datos se dañaron.
 """
 
-import re
-from datetime import datetime, timedelta
+import shutil
 from pathlib import Path
 from sentinel_downloader.gee_downloader import GEEDownloader
+from sentinel_downloader.manifiesto import (
+    Manifiesto,
+    expandir_periodos,
+    rango_fechas_periodo,
+    carpetas_de_periodo,
+)
 import logging
 
 # Configurar logging
@@ -56,85 +66,37 @@ while not indices_seleccionados:
 
 print(f"{C.G}✓ Índices seleccionados: {', '.join(indices_seleccionados)}{C.E}\n")
 
-# 2. SELECCIÓN DE FECHAS
-def detectar_ultima_fecha(directorio_descargas: str = "descargas") -> datetime | None:
-    """
-    Escanea la carpeta de descargas y retorna la fecha más reciente encontrada
-    en los nombres de archivos .tiff. Retorna None si no hay descargas previas.
-    """
-    patron_fecha = re.compile(r'_(\d{8})_')
-    directorio = Path(directorio_descargas)
-    
-    if not directorio.exists():
-        return None
-    
-    fechas = []
-    for tiff in directorio.glob("**/*.tiff"):
-        match = patron_fecha.search(tiff.name)
-        if match:
-            try:
-                fechas.append(datetime.strptime(match.group(1), "%Y%m%d"))
-            except ValueError:
-                continue
-    
-    return max(fechas) if fechas else None
-
-
-fecha_inicio = None
-fecha_fin = None
-diferencia = 0
-
-ultima_fecha = detectar_ultima_fecha()
-
-if ultima_fecha is not None:
-    fecha_inicio = ultima_fecha + timedelta(days=1)
-    # Sumar 3 meses aproximando a 92 días para garantizar ≥ 30 días
-    fecha_fin = ultima_fecha + timedelta(days=92)
-    fecha_inicio_str = fecha_inicio.strftime("%Y-%m-%d")
-    fecha_fin_str = fecha_fin.strftime("%Y-%m-%d")
-    diferencia = (fecha_fin - fecha_inicio).days
-
-    print(f"{C.B}RANGO DE FECHAS (detectado automáticamente):{C.E}")
-    print(f"  Última imagen encontrada: {C.G}{ultima_fecha.strftime('%Y-%m-%d')}{C.E}")
-    print(f"  Inicio:  {C.G}{fecha_inicio_str}{C.E}")
-    print(f"  Fin:     {C.G}{fecha_fin_str}{C.E}")
-    print(f"  Total:   {diferencia} días")
+# 2. SELECCIÓN DE PERIODOS (YYYYMM)
+periodos = []
+while not periodos:
+    print(f"{C.Y}PERIODOS A DESCARGAR (formato YYYYMM):{C.E}")
+    print("  Rango:  202201-202608   (todos los meses entre ambos)")
+    print("  Lista:  202609,202601   (solo esos meses)")
+    print("  Mezcla: 202201-202203,202609")
     print()
-else:
-    print(f"{C.Y}No se encontraron descargas previas. Ingresa el rango de fechas manualmente.{C.E}\n")
+    entrada = input(f"{C.G}Periodos: {C.E}").strip()
+    try:
+        periodos = expandir_periodos(entrada)
+    except ValueError as e:
+        print(f"{C.R}✗ {e}. Intenta de nuevo.{C.E}\n")
 
-    while fecha_inicio is None or fecha_fin is None:
-        print(f"{C.Y}RANGO DE FECHAS (mínimo 30 días):{C.E}")
-        print("Formato: YYYY-MM-DD (ejemplo: 2025-10-01)")
-        print()
+print(f"{C.G}✓ {len(periodos)} periodo(s): {periodos[0]} → {periodos[-1]}{C.E}")
+if len(periodos) <= 12:
+    print(f"  {', '.join(periodos)}")
+print()
 
-        fecha_inicio_str = input(f"{C.G}Fecha de inicio: {C.E}").strip()
-        fecha_fin_str = input(f"{C.G}Fecha de fin: {C.E}").strip()
-
-        try:
-            fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d")
-            fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d")
-
-            diferencia = (fecha_fin - fecha_inicio).days
-
-            if diferencia < 0:
-                print(f"{C.R}✗ La fecha de fin debe ser posterior a la fecha de inicio. Intenta de nuevo.{C.E}\n")
-                fecha_inicio = None
-                fecha_fin = None
-                continue
-
-            if diferencia < 30:
-                print(f"{C.R}✗ El rango debe ser de al menos 30 días (tienes {diferencia} días). Intenta de nuevo.{C.E}\n")
-                fecha_inicio = None
-                fecha_fin = None
-                continue
-
-            print(f"{C.G}✓ Rango: {fecha_inicio_str} a {fecha_fin_str} ({diferencia} días){C.E}\n")
-
-        except ValueError:
-            print(f"{C.R}✗ Error en el formato de fecha. Usa YYYY-MM-DD (ejemplo: 2025-10-01). Intenta de nuevo.{C.E}\n")
-            fecha_inicio = None
-            fecha_fin = None
+# 2b. MODO: solo faltantes (por defecto) o reemplazar
+print(f"{C.Y}MODO DE DESCARGA:{C.E}")
+print("  1. Solo faltantes  - omite periodos/imágenes ya descargados (recomendado)")
+print("  2. Reemplazar      - borra y vuelve a descargar los periodos indicados")
+print()
+modo = None
+while modo not in ['1', '2', '']:
+    modo = input(f"{C.G}Selecciona el modo [1]: {C.E}").strip()
+    if modo not in ['1', '2', '']:
+        print(f"{C.R}✗ Opción inválida.{C.E}")
+reemplazar = (modo == '2')
+print(f"{C.G}✓ Modo: {'REEMPLAZAR' if reemplazar else 'solo faltantes'}{C.E}\n")
 
 # 3. SELECCIÓN DE SHAPEFILE
 # Buscar todos los shapefiles
@@ -204,12 +166,33 @@ if shapefile_seleccionado.parent != shapefiles_dir:
     nombre_area = shapefile_seleccionado.parent.name
 else:
     nombre_area = shapefile_seleccionado.stem
-print(f"  Área:    {nombre_area}")
-print(f"  Índices: {', '.join(indices_seleccionados)}")
-print(f"  Desde:   {fecha_inicio_str}")
-print(f"  Hasta:   {fecha_fin_str}")
-print(f"  Total:   {len(indices_seleccionados)} índices en {diferencia} días")
+print(f"  Área:     {nombre_area}")
+print(f"  Índices:  {', '.join(indices_seleccionados)}")
+print(f"  Periodos: {periodos[0]} → {periodos[-1]} ({len(periodos)} meses)")
+print(f"  Modo:     {'REEMPLAZAR (borra y re-descarga)' if reemplazar else 'solo faltantes'}")
+print(f"  Total:    {len(indices_seleccionados) * len(periodos)} combinaciones índice×periodo")
 print()
+
+# Consultar manifiesto para anticipar qué se omitirá
+manifiesto = Manifiesto(Path("descargas") / nombre_area)
+agregados = manifiesto.reconstruir_desde_disco()
+if agregados:
+    manifiesto.guardar()
+    print(f"{C.Y}ℹ Manifiesto reconstruido desde disco: {agregados} periodo(s) ya descargados registrados{C.E}")
+
+if not reemplazar:
+    ya_completos = [
+        (idx, per) for idx in indices_seleccionados for per in periodos
+        if manifiesto.esta_completo(idx, per)
+    ]
+    pendientes = len(indices_seleccionados) * len(periodos) - len(ya_completos)
+    print(f"  Ya completos (se omiten): {len(ya_completos)}")
+    print(f"  Por descargar:            {pendientes}")
+    print()
+    if pendientes == 0:
+        print(f"{C.G}✓ Todo lo solicitado ya está descargado. Nada que hacer.{C.E}")
+        print(f"{C.Y}  Usa el modo 'Reemplazar' si necesitas volver a bajar algún periodo.{C.E}\n")
+        exit(0)
 
 confirmar = input(f"{C.Y}¿Continuar con la descarga? (s/n): {C.E}").strip().lower()
 
@@ -223,47 +206,91 @@ print("INICIANDO DESCARGAS...")
 print(f"{'='*60}{C.E}\n")
 
 try:
-    # Crear instancia del descargador de GEE
     descargador = GEEDownloader()
-    
-    # Descargar cada índice usando el shapefile seleccionado
-    for i, indice in enumerate(indices_seleccionados, 1):
-        print(f"\n{C.Y}[{i}/{len(indices_seleccionados)}] Descargando {indice}...{C.E}")
-        
-        # Determinar el nombre del área basándose en la carpeta o archivo
-        if shapefile_seleccionado.parent != shapefiles_dir:
-            nombre_area = shapefile_seleccionado.parent.name
-        else:
-            nombre_area = shapefile_seleccionado.stem
-        
-        resultado = descargador.descargar_indice(
-            shapefile_path=shapefile_path,
-            indice=indice,
-            fecha_inicio=fecha_inicio_str,
-            fecha_fin=fecha_fin_str,
-            nombre_area=nombre_area,
-            max_cloud=30
-        )
-        
-        if resultado['exito']:
-            print(f"{C.G}✓ {indice} completado:{C.E}")
-            print(f"  - Imágenes descargadas: {resultado['exitosos']}/{resultado['num_imagenes']}")
-            if resultado['fallidos'] > 0:
-                print(f"  - Fallidas: {resultado['fallidos']}")
-        else:
-            print(f"{C.R}✗ Error en {indice}: {resultado.get('error', 'Desconocido')}{C.E}")
-    
+    carpeta_area = Path("descargas") / nombre_area
+
+    total = len(indices_seleccionados) * len(periodos)
+    n = 0
+    resumen = {'descargadas': 0, 'omitidas': 0, 'fallidas': 0,
+               'periodos_omitidos': 0, 'periodos_sin_imagenes': 0}
+
+    for indice in indices_seleccionados:
+        print(f"\n{C.B}══ {indice} ══{C.E}")
+        carpeta_indice = carpeta_area / indice
+
+        for periodo in periodos:
+            n += 1
+            etiqueta = f"[{n}/{total}] {indice} {periodo}"
+
+            if not reemplazar and manifiesto.esta_completo(indice, periodo):
+                print(f"{C.Y}{etiqueta}: ya completo, omitido{C.E}")
+                resumen['periodos_omitidos'] += 1
+                continue
+
+            if reemplazar:
+                viejas = carpetas_de_periodo(carpeta_indice, periodo)
+                for carpeta in viejas:
+                    shutil.rmtree(carpeta)
+                if viejas:
+                    print(f"{C.Y}{etiqueta}: {len(viejas)} carpeta(s) previas eliminadas{C.E}")
+
+            fecha_inicio_str, fecha_fin_str = rango_fechas_periodo(periodo)
+            print(f"{C.Y}{etiqueta}: descargando {fecha_inicio_str} → {fecha_fin_str}{C.E}")
+
+            resultado = descargador.descargar_indice(
+                shapefile_path=shapefile_path,
+                indice=indice,
+                fecha_inicio=fecha_inicio_str,
+                fecha_fin=fecha_fin_str,
+                nombre_area=nombre_area,
+                max_cloud=30,
+                omitir_existentes=not reemplazar,
+            )
+
+            if not resultado['exito']:
+                print(f"{C.R}✗ {etiqueta}: {resultado.get('error', 'Desconocido')}{C.E}")
+                resumen['fallidas'] += 1
+                continue
+
+            exitosos = resultado['exitosos']
+            fallidos = resultado['fallidos']
+            omitidos = resultado.get('omitidos', 0)
+            fechas = resultado.get('fechas', [])
+
+            if resultado.get('sin_imagenes'):
+                print(f"{C.Y}  ⚠ Sin imágenes disponibles (nubes > 30% o sin pasadas){C.E}")
+                resumen['periodos_sin_imagenes'] += 1
+            else:
+                print(f"{C.G}  ✓ {exitosos} descargadas, {omitidos} ya existían, {fallidos} fallidas{C.E}")
+
+            resumen['descargadas'] += exitosos
+            resumen['omitidas'] += omitidos
+            resumen['fallidas'] += fallidos
+
+            # Registrar en manifiesto (aun con 0 imágenes: el periodo se consultó)
+            manifiesto.registrar(indice, periodo, fechas, exitosos + omitidos, fallidos,
+                                 reemplazo=reemplazar)
+            manifiesto.guardar()
+
     print(f"\n{C.B}{'='*60}")
     print("PROCESO COMPLETADO")
-    print(f"{'='*60}{C.E}\n")
-    print(f"{C.G}Las descargas están en: descargas/{C.E}")
-    print(f"{C.Y}Cada índice tiene múltiples imágenes del rango de fechas{C.E}")
+    print(f"{'='*60}{C.E}")
+    print(f"  Imágenes descargadas:   {resumen['descargadas']}")
+    print(f"  Imágenes ya existentes: {resumen['omitidas']}")
+    print(f"  Imágenes fallidas:      {resumen['fallidas']}")
+    print(f"  Periodos omitidos:      {resumen['periodos_omitidos']} (ya completos)")
+    print(f"  Periodos sin imágenes:  {resumen['periodos_sin_imagenes']}")
+    print()
+    print(f"{C.G}Las descargas están en: descargas/{nombre_area}/{C.E}")
+    print(f"{C.G}Manifiesto: {manifiesto.ruta}{C.E}")
+    if reemplazar:
+        print(f"{C.Y}Los periodos reemplazados quedaron marcados para recalcular en el análisis{C.E}")
     print(f"{C.G}Para extraer píxeles, ejecuta: python extraer_pixeles.py{C.E}\n")
-    
+
 except Exception as e:
     print(f"\n{C.R}✗ ERROR CRÍTICO: {e}{C.E}")
     print(f"{C.Y}Verifica:{C.E}")
     print(f"  1. Archivo JSON de service account (tesis-*.json) en la carpeta raíz")
     print(f"  2. Shapefile en carpeta shapefiles/")
-    print(f"  3. Fechas válidas y rango mínimo de 30 días\n")
+    print(f"  3. Periodos válidos en formato YYYYMM\n")
     exit(1)
