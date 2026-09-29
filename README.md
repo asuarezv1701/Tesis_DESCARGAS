@@ -308,6 +308,24 @@ python inicio.py
 
 ---
 
+## Publicar tus cambios
+
+El script [`desplegar.sh`](desplegar.sh) verifica el entorno, comprueba que todo compile y
+publica los cambios en GitHub:
+
+```bash
+./desplegar.sh                    # Verifica, commitea y sube
+./desplegar.sh "mi mensaje"       # Con tu propio mensaje
+./desplegar.sh --sin-push "msg"   # Commit local, sin subir
+./desplegar.sh --solo-verificar   # Solo revisa, no toca git
+```
+
+> **Importante:** este proyecto y `Tesis_ANALISIS` son **repositorios git independientes**.
+> El mismo script funciona en ambos, pero hay que ejecutarlo dentro de cada carpeta por
+> separado; un solo commit no puede abarcar los dos.
+
+---
+
 ## Y después, ¿qué sigue?
 
 Una vez descargados los datos, el proyecto **Tesis_ANALISIS** los procesa para generar
